@@ -270,7 +270,7 @@
         {
           "slug": "spec",
           "title": "Language specification",
-          "status": "planned",
+          "status": "draft",
           "summary": "The grammar and semantics of Zell, normative."
         },
         {

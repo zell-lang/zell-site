@@ -1,0 +1,962 @@
+This is the reference manual for the Zell programming language. It defines the syntax and the meaning of
+programs. The design document `DESIGN.md` in the compiler repository is the source of truth; this page
+states the same rules in English. Where the released compiler, zell 0.1.5, does not yet do what the design
+says, a note marks the difference and describes what 0.1.5 does.
+
+<Callout type="note">
+This page currently covers the language through [Declarations and scope](#declarations-and-scope).
+Expressions, statements, errors, memory, concurrency, reflection and program execution follow in a later
+revision; until then, the [Learn](/docs/learn/basics) chapters describe them.
+</Callout>
+
+## Notation
+
+The syntax is given in Extended Backus-Naur Form, in the notation of the grammar file `grammar/zell.bnf`:
+
+```ebnf
+production ::= name "::=" expression
+expression ::= alternative ("|" alternative)*
+alternative ::= term term*
+term       ::= name | TOKEN | "(" expression ")" | term "?" | term "*" | term "+"
+```
+
+`a?` is an optional `a`, `a*` is zero or more, `a+` is one or more. Names in upper case are tokens of the
+lexical grammar (`IDENTIFIER`, `LBRACE`); a keyword token is written as the keyword in upper case
+(`FUNC` is `func`).
+
+Error messages quoted on this page are those of zell 0.1.5.
+
+## Source code representation
+
+Source code is Unicode text encoded in UTF-8. A source file has the extension `.zl`. Carriage returns
+before a newline are ignored, so files with `\r\n` line endings mean the same as files with `\n`.
+
+A letter is any Unicode character with the Alphabetic property; a digit is a character `0` to `9` unless
+stated otherwise.
+
+## Lexical elements
+
+### Comments
+
+There are two forms:
+
+- A line comment starts with `//` and ends at the end of the line.
+- A block comment starts with `/*` and ends with the matching `*/`. Block comments nest:
+  `/* a /* b */ c */` is one comment.
+
+A comment acts as whitespace. A line comment directly before a declaration is that declaration's doc
+comment, read by `zell doc` and the language server. `// zell:allow L0004` is an ordinary comment that
+tools read to suppress a lint finding.
+
+### Tokens
+
+Tokens are identifiers, keywords, operators and punctuation, and literals. Whitespace (spaces, tabs,
+carriage returns and newlines) separates tokens and is otherwise ignored, except that a newline may insert
+a semicolon.
+
+### Semicolons
+
+Statements and declarations are terminated by semicolons, which programs almost never write. At a
+newline, the lexer inserts a semicolon after the last token of the line if that token is one of:
+
+- an identifier, or a keyword used as a name directly after `.`;
+- a literal;
+- one of the keywords `return`, `break`, `continue`, `nil`, `true`, `false`, `this`, `_`;
+- one of `)`, `]`, `}`, `?`, `!`;
+- `>` or `>>` closing a list of type arguments (`var x List<List<int>>`).
+
+Differences from Go:
+
+- No semicolon is inserted while directly inside `( )` or `[ ]`. Argument lists and slice literals can
+  span lines without a trailing comma.
+- No semicolon is inserted after `:`, so a label on its own line applies to the next statement.
+- If the first token of a line is `.`, the line continues the previous one: a method chain can break
+  before the dot. Comments and blank lines in between do not matter.
+
+```zell
+var words = strings
+    .Fields("to be or not")
+var larger = math.Max(
+    1.5,
+    2.5
+)
+```
+
+Two statements on one line are separated by an explicit `;`.
+
+### Identifiers
+
+```ebnf
+IDENTIFIER ::= letter (letter | digit | "_")*
+```
+
+An identifier starts with a letter or `_` and continues with letters, digits and `_`. Identifiers are case
+sensitive. The case of the first letter decides visibility (see [Exported identifiers](#exported-identifiers)).
+A lone `_` is not an identifier but the blank token.
+
+### Keywords
+
+These keywords are reserved and cannot be used as identifiers:
+
+```text
+as        async     await     break     case      catch     const     continue
+default   defer     else      enum      false     for       func      if
+import    interface map       namespace new       nil       return    static
+struct    switch    this      true      try       var       _
+```
+
+<Callout type="note">
+`as` is reserved: `var as = 1` fails with `expected identifier, found as`, although `as` has a meaning
+only in an `import`. Unlike `in` and `type`, it is not contextual.
+</Callout>
+
+The following words are contextual: they have a special meaning only in one position and are ordinary
+identifiers everywhere else.
+
+| Word | Special in |
+|---|---|
+| `in` | between the loop variables and the sequence of a `for` |
+| `type` | `type Name = T` at the top level |
+| `implements` | after the name of a struct or enum declaration |
+| `sealed` | before `interface` |
+| `weak` | directly before `*` in a type |
+| `extern` | function declarations in the standard library's `*_extern.zl` files only |
+
+A keyword may be used as a name in three places: as a segment of a qualified name (`namespace
+examples.async`), as a member name after `.` (`tag.default`), and as the name of a struct field or of an
+attribute argument (`@cli.flag(default: "8080")`). The exceptions are `func`, `static` and `async`, which
+start a method, and `_`.
+
+### Operators and punctuation
+
+```text
++    &    +=   &=   &&   ==   !=   (    )
+-    |    -=   |=   ||   <    <=   [    ]
+*    ^    *=   ^=   =>   >    >=   {    }
+/    <<   /=   <<=  ..   =    ...  ,    ;
+%    >>   %=   >>=  ?    !    @    @=   :    .
+```
+
+There are no `++` and `--` operators. `i++` at the end of a statement is an error with a fix:
+`Zell has no ++; write i += 1`.
+
+### Integer literals
+
+```ebnf
+INT_LITERAL ::= decimal | "0x" hex_digits | "0b" binary_digits | "0o" octal_digits
+```
+
+The prefixes may also be upper case (`0X`, `0B`, `0O`). `_` may appear between digits for readability and
+has no value: `1_000_000`. An integer literal is an untyped integer constant.
+
+```zell
+var a = 255
+var b = 0xff
+var c = 0b1111_1111
+var d = 0o377
+```
+
+### Floating-point literals
+
+```ebnf
+FLOAT_LITERAL ::= decimals "." decimals exponent? | decimals exponent
+exponent      ::= ("e" | "E") ("+" | "-")? decimals
+```
+
+A floating-point literal has a fractional part, an exponent, or both: `0.5`, `1e6`, `2.5e-3`. There must
+be digits on both sides of the dot; `.5` and `5.` are not literals. A floating-point literal is an untyped
+floating-point constant.
+
+### Character literals
+
+A character literal is one Unicode code point in single quotes, `'a'`, `'é'`, or one escape sequence,
+`'\n'`, `'\u{1F600}'`. Its value is an untyped constant of type `char`. An empty literal or a literal with
+more than one character is an error.
+
+### String literals
+
+An interpreted string literal is a sequence of characters between double quotes. It may not contain a
+newline. Backslash starts an escape sequence:
+
+| Escape | Value |
+|---|---|
+| `\n` | newline U+000A |
+| `\t` | horizontal tab U+0009 |
+| `\r` | carriage return U+000D |
+| `\0` | NUL U+0000 |
+| `\\` | backslash |
+| `\"` | double quote |
+| `\'` | single quote |
+| `\u{h…}` | the code point with 1 to 6 hexadecimal digits `h`; surrogates and values above U+10FFFF are errors |
+
+Any other character after a backslash is an error: `unknown escape sequence`. There are no octal (`\101`),
+`\x` or four-digit `\u0041` escapes; write `\u{41}`.
+
+A raw string literal is a sequence of characters between backquotes. It has no escapes, may span lines,
+and its value is the text between the quotes with carriage returns removed.
+
+```zell
+var path = `C:\temp\new`
+var query = `SELECT id
+FROM users`
+var smile = "\u{1F600} \"quoted\""
+```
+
+## Constants
+
+A constant is a value known at compile time. Literals, `true`, `false`, the names declared with `const`,
+and the compile-time constants of the standard library such as `os.Name`, `os.Arch`, `os.PathSeparator`,
+`os.LineSeparator` and `math.MaxInt` are constants. A constant expression combines constants with
+operators; it is evaluated at compile time with arbitrary precision.
+
+A constant declared without a type, and every literal, is untyped. An untyped constant takes the type
+required by its context: in `var f float = 2` the constant `2` becomes a `float`, and in `var b byte = 255`
+a `byte`. Without such a context it takes its default type: `int` for integer constants, `float` for
+floating-point constants, `char` for character constants, `string`, `bool`.
+
+An untyped integer constant is converted to a floating-point type exactly. A floating-point constant
+converts to an integer type only if it has no fractional part: `var i int = 2.0` is valid, while
+`var i int = 2.5` fails with `cannot assign float to variable of type int`. A constant that does not fit
+its type is an error:
+
+```zell
+// error: constant 300 overflows int8
+var small int8 = 100 * 3
+```
+
+Integer division by a constant zero is an error (`division by zero`). An integer constant is not
+implicitly a `char`: `var c char = 0x41` is an error; write `char(0x41)` or `'A'`.
+
+## Variables
+
+A variable is a storage location for a value. A variable declared with `var` has a static type, given
+explicitly or inferred from the initializer. A variable of an interface type also has a dynamic type, the
+type of the value stored in it at run time.
+
+Local variables live until the end of their block. A variable whose address may escape the function, and
+every value captured by a closure, is kept alive by reference counting as long as it is referenced; see
+the memory chapter of [Learn](/docs/learn/memory).
+
+## Types
+
+```ebnf
+type        ::= prefix_type BANG?
+prefix_type ::= pointer_type | slice_type | array_type | map_type | func_type | tuple_type | named_type
+named_type  ::= qualified_name generic_args?
+generic_args ::= LT type (COMMA type)* GT
+pointer_type ::= IDENTIFIER? STAR prefix_type        // the optional IDENTIFIER is "weak"
+slice_type  ::= LBRACKET RBRACKET prefix_type
+array_type  ::= LBRACKET expr RBRACKET prefix_type
+map_type    ::= MAP LBRACKET type RBRACKET prefix_type
+func_type   ::= FUNC LPAREN (type (COMMA type)*)? RPAREN type?
+tuple_type  ::= LPAREN type (COMMA type)+ RPAREN
+```
+
+`!` applies to the whole type before it: `[]int!` is a slice of `int` or an error, not a slice of
+fallible values. In a function type the `!` belongs to the result: `func(int) int!`.
+
+Two types are identical if they have the same name and type arguments, or, for unnamed types, the same
+structure with identical components. A type alias denotes the type it names. A value is assignable to a
+variable of type `T` if its type is identical to `T`, if it is an untyped constant representable in `T`,
+if `T` is an interface the value's type implements, or if it is `nil` and `T` is a pointer, slice, map,
+function, interface or error type. There are no other implicit conversions: `var f float = x` with
+`x int` fails with `cannot assign int to variable of type float`.
+
+### Boolean type
+
+`bool` has the two values `true` and `false`.
+
+### Numeric types
+
+| Type | Values |
+|---|---|
+| `int8`, `int16`, `int32`, `int` | signed integers of 8, 16, 32 and 64 bits, two's complement |
+| `uint8`, `uint16`, `uint32`, `uint64` | unsigned integers of 8, 16, 32 and 64 bits |
+| `float32`, `float` | IEEE 754 binary32 and binary64 |
+
+`int64` is another spelling of `int`, `uint` of `uint64`, `byte` of `uint8`, and `float64` of `float`:
+each pair is one type. All other numeric types are distinct, and mixing them needs an explicit
+conversion. Arithmetic on integer types wraps around on overflow; it never panics. Integer
+division truncates toward zero and `%` has the sign of the dividend. Division of an integer by a zero
+variable panics.
+
+### Character type
+
+`char` is a Unicode code point stored in 32 bits, like Go's `rune`. Operations:
+
+| Operation | Result |
+|---|---|
+| `char - char` | `int` |
+| `char + n`, `n + char`, `char - n`, for any integer `n` | `char`; also `c += n`, `c -= n` |
+| `==`, `!=`, `<`, `<=`, `>`, `>=` | `bool` |
+
+Any other arithmetic, such as `c + c` or `c * 2`, is an error; convert with `int(c)` first. The result of
+`char` arithmetic is computed as an `int` and converted as by `char(n)`: the low 32 bits, with no check
+that the value is a valid code point. An invalid code point is printed as U+FFFD.
+
+### String type
+
+`string` is an immutable sequence of bytes, by convention UTF-8 text. `len(s)` is the number of bytes.
+`s[i]` is the byte at offset `i` (type `byte`); an index out of range panics. `s[a..b]` is the substring
+of bytes `a` through `b - 1`. A `for` loop over a string yields code points. Strings cannot be modified:
+`s[0] = 1` is an error. `+` concatenates and the comparison operators compare bytewise.
+
+### Array types
+
+`[N]T` is an array of exactly `N` elements of type `T`. `N` is a non-negative integer constant
+expression and is part of the type. Arrays are values: assignment and argument passing copy every
+element. A slice literal where an array is expected is an array literal and must have exactly `N`
+elements:
+
+```zell
+// error: array literal has 3 elements, want 2
+var a [2]int = [1, 2, 3]
+```
+
+There are no `[N]T{…}` or `[...]T{…}` literal forms.
+
+### Slice types
+
+`[]T` is a view of a contiguous run of elements of type `T` in a shared, growable buffer. A slice has a
+length, `len(s)`. Slices are references: copying a slice copies the view, not the elements, and a
+sub-slice `s[a..b]` shares the buffer of `s`. `append(s, x…)` returns a slice that may share the buffer of
+`s` or use a new one.
+
+The zero value of a slice type has length 0 and can be appended to.
+
+<Callout type="note">
+Whether an empty slice literal `[]` is distinct from the zero value (Go's nil versus empty slice) is not
+specified. In 0.1.5, `var e []int = []` gives `e == nil` → `true`. Do not rely on either outcome.
+</Callout>
+
+### Map types
+
+`map[K]V` is a hash table from keys of type `K` to values of type `V`. `K` must be comparable with the
+built-in `==`: a numeric type, `bool`, `char`, `string`, a pointer, or a plain enum. A struct key fails
+with `invalid map key type`. Maps are references: copies share the same entries. Iteration order is
+unspecified.
+
+The zero value of a map type is an empty map that can be read and passed around; writing an entry to it
+panics with `assignment to entry in nil map`.
+
+### Tuple types
+
+`(T1, T2, …)` has two or more elements. Tuples are values. Element `i` of a tuple `t` is `t.i` (also
+`t._i`); `t.0.1` is nested access. An index outside the tuple is an error:
+`tuple (int, int) has no element 2`. Functions with several results return a tuple.
+
+### Struct types
+
+A struct is a named sequence of fields and the methods declared with it.
+
+```ebnf
+struct_decl  ::= STRUCT IDENTIFIER generic_params? implements_clause? LBRACE struct_member* RBRACE
+struct_member ::= attribute* (method_decl | field_decl | embed_decl) eos?
+field_decl   ::= field_name (COMMA field_name)* type (ASSIGN expr)?
+embed_decl   ::= type
+method_decl  ::= STATIC? func_decl
+```
+
+```zell
+struct Point {
+    X float
+    Y float
+    Label string = "origin"
+
+    func Length() float {
+        return math.Sqrt(this.X * this.X + this.Y * this.Y)
+    }
+
+    static func At(x, y float) Point {
+        return Point{X: x, Y: y}
+    }
+}
+```
+
+Field names are unique within a struct. A field may have a default value, a constant expression; it is
+used where a struct literal omits the field and for a variable declared without an initializer.
+
+A field declared with a type name and no field name is embedded. The fields and methods of an embedded
+struct are promoted: `d.Name` reaches `d.Animal.Name` unless the outer struct declares the name itself.
+Embedding is composition; there is no inheritance and no virtual dispatch through embedded structs.
+
+Struct values are compared with `==` only if the struct declares an `Equals` method; otherwise `==` fails
+with `operator == is not defined on P`.
+
+### Pointer types
+
+`*T` is a pointer to a value of type `T`; its zero value is `nil`. `&x` takes the address of a variable or
+a composite literal, `*p` dereferences, and a field of a struct is reached through a pointer directly:
+`p.X`. There is no pointer arithmetic: `p + 1` is an error. `new T` and `new T{…}` allocate a value and
+return a `*T`.
+
+A pointer to a whole object counts as a reference to it. A pointer into an object, `&s.f` or `&xs[i]`, is
+an interior pointer: it may be dereferenced, compared, held in a local variable and passed to a parameter
+that does not keep it, but storing it in a field, element, map, closure or interface, or returning it, is
+a compile error (`cannot keep an interior pointer`).
+
+`weak *T` is a weak pointer. It does not keep its target alive; reading it yields a `*T` that is `nil`
+once the target has been freed. A weak pointer is made from a `*T`, not from an interior pointer. Weak
+pointers break reference cycles such as a child's link to its parent.
+
+```zell
+struct Node {
+    Children []*Node
+    Parent weak *Node
+}
+```
+
+### Function types
+
+`func(T1, T2) R` is the type of functions with parameters `T1`, `T2` and result `R`; the result is
+omitted for none. Functions are values. The zero value is `nil`. A variadic function's value has a slice
+as its last parameter type: `func f(a int, b ...string)` has type `func(int, []string) int`.
+
+A function type with a fallible result is written `func(int) int!`. A function literal is assignable only
+if its result type is identical: `var g func(int) int! = (x int) => x` fails with
+`cannot assign func(int) int to variable of type func(int) int!`.
+
+### Interface types
+
+An interface is a set of method signatures. A type implements an interface if its method set contains
+every method without a body; implementation is structural and needs no declaration.
+
+```ebnf
+interface_decl ::= IDENTIFIER? INTERFACE IDENTIFIER LBRACE ((attribute* func_signature block? | named_type) eos?)* RBRACE
+```
+
+```zell
+interface Named {
+    func Name() string
+}
+
+interface Greeter {
+    Named                                         // embedded interface
+    func Greet() string { return "hi " + this.Name() }   // default method
+}
+```
+
+- **Embedding.** A bare interface name in the body adds that interface's methods. Methods with the same
+  name must have identical signatures; a method declared in the embedding interface takes precedence. An
+  interface that embeds itself, directly or not, is an error.
+- **Default methods.** A method with a body is a default method. It may use only the interface's other
+  methods; `this` is the interface value. A type's own method of the same name overrides it. Default
+  methods cannot be `static`, `async` or generic. A default method is callable on a value of an
+  implementing type; if two interfaces the type implements both provide it, the call is an error
+  (`ambiguous default method`).
+- **Conversion.** A value of an interface type converts implicitly to an interface whose methods are a
+  subset of its own.
+- **`implements`.** `struct S implements I, J { … }` and `enum E implements I { … }` check at the
+  declaration that the type implements each interface, with the same message as a failed conversion:
+  `Sq does not implement Shape: missing method Perimeter`. It does not change the semantics.
+- **`sealed`.** `sealed interface I` can only be implemented by types of the same namespace. A type switch
+  without `default` over a sealed interface must list every implementation.
+- **`async` methods.** In an interface, `async func M() R` is shorthand for `func M() Task<R>`.
+
+The predeclared interface `error` has one method, `func Message() string`. The predeclared type `any` is
+the empty interface: every type implements it.
+
+Interfaces cannot be generic: `generic interfaces are not supported (only functions, methods, structs and
+enums can be generic)`.
+
+<Callout type="note">
+**Differs from the design.** The design uses `fmt.Stringer` in `implements` clauses; 0.1.5 has no such
+interface (`unknown identifier Stringer in namespace fmt`). Printing still uses a `String() string`
+method when a type has one.
+</Callout>
+
+<Callout type="note">
+**Differs from the design.** A value of interface type stored in `any` keeps the interface, not its
+dynamic type: after `var s Shape = Sq{}` and `var a any = s`, neither `case Shape x:` nor `case Sq q:`
+matches in a `switch a`. Assign the concrete value to `any` directly.
+</Callout>
+
+### Enum types
+
+An enum is a closed set of variants. A variant may carry fields. Methods follow the variants.
+
+```ebnf
+enum_decl    ::= ENUM IDENTIFIER generic_params? implements_clause? LBRACE enum_variant ((COMMA | eos) enum_variant)* (COMMA | eos)? (attribute* method_decl eos?)* RBRACE
+enum_variant ::= attribute* IDENTIFIER (LPAREN param_list? RPAREN)?
+```
+
+```zell
+enum Color { Red, Green, Blue }
+
+enum Shape {
+    Circle(r float)
+    Rect(w float, h float)
+    Empty
+
+    func IsRound() bool {
+        switch this {
+            case Shape.Circle(r): return r > 0
+            default: return false
+        }
+    }
+}
+```
+
+A variant is named through its enum: `Color.Red`, `Shape.Circle(2.0)`. In a method, `this` is a copy of
+the enum value. Enums have no static methods. A plain enum (no variant with fields) supports `==` and
+`!=`, converts to its variant index with `int(e)` starting from 0, can be a map key, and prints as its
+variant name. An enum with fields supports `==` only through an `Equals` method.
+
+The zero value of an enum is its first variant; for a variant with fields, the fields hold their zero
+values.
+
+<Callout type="note">
+The design states the zero value only for plain enums. 0.1.5 also uses the first variant, with zero
+fields, for enums with data: `var s Shape` matches `case Shape.Circle(r)` with `r == 0`.
+</Callout>
+
+### Fallible types
+
+`T!` holds either a value of type `T` or an error. `void!` holds nothing or an error. Inside a function
+whose result is `T!`, `return` accepts a `T` or an `error`. A `T!` value must be handled with `?`, `try`
+or `_ =` before its value is used; it cannot be passed as an argument or stored in a variable of type
+`T`. `T!!` is not a type.
+
+### Task type
+
+`Task<T>` is the result of calling an `async` function with result `T`. `await t` suspends the current
+`async` function until `t` completes and yields its `T`. `Task<T!>` is the task of a fallible async
+function.
+
+### Type aliases
+
+```ebnf
+type_alias_decl ::= "type" IDENTIFIER "=" type
+```
+
+`type Name = T` at the top level declares `Name` as another name for `T`. The alias and `T` are
+interchangeable everywhere: in assignments, signatures, method sets, literals (`Ints{1, 2}` for
+`type Ints = []int`), static calls, variants and conversions.
+
+```zell
+type Celsius = float
+type Ints = []int
+type Handler = func(string) int!
+```
+
+An alias may refer to another alias; a cycle is an error (`invalid recursive type alias`). Aliases cannot
+be generic or local to a function, and cannot carry attributes other than `@cfg`.
+
+### Generic types and functions
+
+Functions, methods, structs and enums may have type parameters; interfaces may not.
+
+```ebnf
+generic_params ::= LT generic_param (COMMA generic_param)* GT
+generic_param  ::= IDENTIFIER (COLON type)?
+```
+
+```zell
+struct Pair<A, B> {
+    First A
+    Second B
+    func Swap() Pair<B, A> { return Pair<B, A>{First: this.Second, Second: this.First} }
+}
+
+func Max<T: Ordered>(a, b T) T {
+    if a > b {
+        return a
+    }
+    return b
+}
+```
+
+Type arguments follow the name: `Pair<int, string>` in a type, `Max<float>(1, 2)` in a call,
+`Pair<int, string>{…}` in a literal, `Option<int>.Some(1)` for a variant, `Max<int>` as a function value.
+In an expression, `<…>` is read as type arguments when the `>` is followed by `(`, `{`, `.`, `)`, `]`,
+`}`, `,` or the end of the statement.
+
+A constraint follows the parameter name after `:`:
+
+| Constraint | Satisfied by | Allows on `T` |
+|---|---|---|
+| none | every type | assignment, passing, returning, `var z T` |
+| `Ordered` | integer and floating-point types, `string`, `char`, types with `func Compare(other T) int` | `<`, `<=`, `>`, `>=`, `==`, `!=`, `+` |
+| `Comparable` | numeric types, `bool`, `char`, `string`, pointers, plain enums | `==`, `!=`, use as a map key |
+| `Equatable` | `Comparable` types and types with `func Equals(other T) bool` | `==`, `!=` |
+| `Add`, `Sub`, `Mul`, `Div`, `Rem`, `Neg`, `MatMul` | numeric types with the operator (`Add` also `string`, `Rem` integers only), types with the operator method | that operator and its `op=` form |
+| an interface `I` | types implementing `I` | the methods of `I`, conversion to `I` |
+
+A generic body is checked once against its constraints, then each instantiation is checked with its
+concrete types. A type argument that violates a constraint is an error at the use:
+`type P does not satisfy constraint Ordered`.
+
+Type arguments omitted in a call are inferred by matching parameter types against argument types
+structurally (`[]T` with `[]int`, `func(T) U` with a function type). Untyped constants are matched last:
+they take the type already inferred for the same parameter, else their default type. A parameter that
+appears only in the result is inferred from the expected type of the call. Conflicting or uninferable
+parameters are errors (`conflicting types for type parameter T`, `cannot infer type parameter T`).
+
+Each distinct instantiation is compiled separately (monomorphization); there is no run-time
+representation of type parameters. Instantiation deeper than 48 levels is an error.
+
+## Zero values
+
+A variable declared without an initializer holds the zero value of its type:
+
+| Type | Zero value |
+|---|---|
+| numeric types, `char` | `0` |
+| `bool` | `false` |
+| `string` | `""` |
+| pointer, function, interface, `error` | `nil` |
+| slice, map | empty (a map cannot be written until assigned a map) |
+| array, tuple | every element zero |
+| enum | the first variant, with zero fields |
+| struct | every field zero, except fields with a default value, which hold that value |
+
+A struct literal applies field defaults for omitted fields. `new T` without a literal, array and slice
+elements, and missing map entries are zero values without field defaults.
+
+<Callout type="note">
+**Differs from the design.** Field defaults apply only to the outermost struct. In 0.1.5, after
+`struct Item { Qty int = 1 }` and `struct Box { One Item }`, `var b Box`, `Box{}` and `new Box` all give
+`b.One.Qty == 0`. Libraries that create values field by field inherit this: `json.Parse<T>` applies
+defaults to the top-level struct, map values and pointer targets, but not to slice elements or nested
+struct fields.
+</Callout>
+
+## Declarations and scope
+
+A declaration binds an identifier to a namespace, constant, variable, type, function, method, label or
+type parameter. Every identifier in a program must be declared; no identifier may be declared twice in
+the same block or namespace (`x redeclared in this block`, `duplicate declaration of f in namespace e`).
+
+### Blocks and scope
+
+A block is a sequence of statements in braces. Besides explicit blocks, there are implicit ones: the
+universe block, one block per namespace, and one per function, `if`, `for`, `switch` case and `catch`
+clause.
+
+- Predeclared identifiers are in the universe block.
+- A top-level declaration is in scope in every file of its namespace, before and after its position.
+- A parameter or type parameter is in scope in the function body.
+- A local variable or constant is in scope from the end of its declaration to the end of the innermost
+  enclosing block. Its own initializer cannot see it: in `var x = x + 1` inside an inner block, the right
+  `x` is the outer one.
+- A label is in scope in the whole function body, but not in function literals inside it.
+
+An identifier declared in a block may be redeclared in an inner block; the inner declaration hides the
+outer one until the inner block ends.
+
+### Predeclared identifiers
+
+```text
+Types:      any bool byte char error float float32 float64 int int8 int16 int32 int64
+            string uint uint8 uint16 uint32 uint64 void Task
+Constants:  true false nil
+Functions:  append delete error len panic typeof
+Constraints: Ordered Comparable Equatable Add Sub Mul Div Rem Neg MatMul
+```
+
+| Function | Meaning |
+|---|---|
+| `len(x)` | length of a string (bytes), slice, array or map |
+| `append(s, x…)` | `s` with elements appended; `append(s, t...)` appends all of `t` |
+| `delete(m, k)` | remove key `k` from map `m`; no effect if absent |
+| `error(msg)` | a new error whose `Message()` is `msg` |
+| `panic(msg)` | stop the current task with a panic |
+| `typeof(x)` | the type descriptor of the dynamic type of `x` |
+
+A member of a standard-library namespace imported in full does not hide these functions.
+
+`print` and `println` are not predeclared: they belong to the namespace `io` and need `import io` or the
+full name `io.println`.
+
+### Exported identifiers
+
+An identifier whose first character is an upper-case letter is exported from its namespace; any other is
+private to it. Using a private name of another namespace is an error:
+`secret is private to namespace app.models (only capitalised names are exported)`. The rule applies to
+types, functions, constants, variables, fields and methods. Some standard-library functions, such as
+`println`, are exported with lower-case names; user code has no such exception.
+
+### Namespaces and source files
+
+```ebnf
+file           ::= attribute* namespace_decl import_decl* top_level_decl*
+namespace_decl ::= NAMESPACE qualified_name eos
+qualified_name ::= name_segment (DOT name_segment)*
+```
+
+Every source file begins with exactly one `namespace` declaration, optionally preceded by attributes such
+as `@cfg`. A second `namespace` declaration is an error. The name is a dot-separated path; each level is a
+separate namespace (`app.services.users` is a child of `app.services`). A namespace may span several
+files, and a program consists of the namespaces of all its files.
+
+The first segments `io`, `net`, `strings` and the other standard-library roots are reserved:
+`namespace io.mine` fails with ``namespace `io.mine` belongs to the standard library``. In a package the
+root segment is the package's namespace (see [zell.toml](/docs/reference/manifest)).
+
+### Imports
+
+```ebnf
+import_decl ::= IMPORT qualified_name (AS IDENTIFIER)? eos
+```
+
+An import makes the members of a namespace available by their short names. The full path is always valid
+without an import.
+
+| Import | Reference |
+|---|---|
+| none | `io.println("hi")`, `app.models.User` |
+| `import io` | `println("hi")` |
+| `import io as out` | `out.println("hi")` |
+| `import app.models` | `User` |
+| `import app.models.User` | `User` only |
+| `import net` | `http.Get(url)`: children by their last segment |
+
+Rules:
+
+- An import that is never used is an error (`unused import strings: nothing from it is used`). Using the
+  imported namespace by name (`import task` and `task.Delay(1)`) counts as a use.
+- A short name brought in by two imports is an error at the use:
+  `ambiguous name Hello: imported from both app.a and app.b; use an alias (as) or the full path`.
+- A declaration of the file's own namespace hides an imported name of the same spelling without error.
+  Each use of the short name then gets warning `L0010`, and the imported member stays reachable by its
+  full path.
+- A name from an import hides a standard-library root of the same name.
+- **Relative references.** The first segment of a path that is not a local name, a member of the own
+  namespace or an import is looked up among the children of the enclosing namespaces, nearest first: in
+  `app.api`, `model.User` means `app.model.User`. Standard-library roots are checked before this rule.
+
+<Callout type="note">
+**Differs from the design.** In 0.1.5 the ambiguity and `L0010` checks cover functions and types but not
+constants: with `const Count` in both `app.a` and `app.b` and both imported, `Count` silently refers to
+the first import.
+</Callout>
+
+### Constant declarations
+
+```ebnf
+const_decl ::= CONST IDENTIFIER type? ASSIGN expr
+```
+
+A constant declaration binds a name to the value of a constant expression, optionally converted to a
+type. Constants may be declared at the top level or in a block. A constant expression may size an array:
+`var buf [N * 2]byte`.
+
+```zell
+const Pi = 3.14159
+const MaxRetries int = 5
+const Greeting = "hello, " + "world"
+const ErrNotFound = error("not found")
+```
+
+An error value made by `error("…")` is a valid constant and serves as a sentinel compared with
+`errors.Is`. A local constant whose initializer is not constant fails with
+`const initializer is not a constant expression`.
+
+<Callout type="note">
+**Differs from the design.** 0.1.5 accepts a function call as the initializer of a top-level constant
+(`const C = f()`) and evaluates it, and lint `L0007` then reports `f` as never used.
+</Callout>
+
+### Variable declarations
+
+```ebnf
+var_decl  ::= VAR (var_name (COMMA var_name)* | var_tuple) type? (ASSIGN expr)?
+var_tuple ::= LPAREN var_name (COMMA var_name)* RPAREN
+var_name  ::= IDENTIFIER | UNDERSCORE
+```
+
+`var` is the only way to declare a variable; there is no `:=`. A declaration gives a type, an
+initializer, or both. Without an initializer the variable holds its zero value. Without a type the type
+is that of the initializer, with untyped constants taking their default type. An initializer whose type
+cannot be inferred is an error, such as an empty slice literal:
+`cannot infer the type of an empty slice literal; declare the variable with a type (var s []int = [])`.
+
+```zell
+func main() {
+    var count = 0
+    var ratio float = 1
+    var names []string
+    var (q, r) = (17 / 5, 17 % 5)
+    var ages = map[string]int{"ann": 31}
+    var age, ok = ages["ann"]
+    println(count, ratio, names, q, r, age, ok)
+}
+```
+
+- **Destructuring.** Several names on the left take the elements of a tuple-valued initializer, in order.
+  `_` discards an element. A type cannot be written in this form. Destructuring, including comma-ok, is
+  allowed only inside functions: `tuple destructuring is not allowed at the top level`.
+- **Comma-ok.** `var v, ok = m[k]` with exactly two names over a map index declares `ok bool`, true if
+  the key is present, and `v` holding the value or its zero value. If the map's value type is itself a
+  tuple with as many elements as names, the names take the tuple's elements instead; with one extra name
+  they take the elements and `ok`. In a generic body where the value type is a type parameter, two names
+  always mean comma-ok.
+- A local variable that is declared and never used is an error (`unused variable x: declared and never
+  used`). Unused parameters and top-level variables are not errors.
+
+Top-level variables are initialized before `main` starts and live for the whole program.
+
+### Function declarations
+
+```ebnf
+func_decl      ::= func_signature block
+func_signature ::= ASYNC? FUNC IDENTIFIER generic_params? LPAREN param_list? RPAREN type?
+param_list     ::= param_group (COMMA param_group)* COMMA?
+param_group    ::= attribute* IDENTIFIER (COMMA IDENTIFIER)* type
+                 | attribute* IDENTIFIER ELLIPSIS type
+```
+
+A parameter is written `name type`; consecutive parameters of one type may share it: `func f(a, b int)`.
+The result type follows the parameter list without a colon and is omitted for no result. Several results
+are a tuple type: `func divmod(a, b int) (int, int)`. Results have no names.
+
+```zell
+func divmod(a, b int) (int, int) {
+    return (a / b, a % b)
+}
+
+func sum(xs ...int) int {
+    var total = 0
+    for x in xs {
+        total += x
+    }
+    return total
+}
+```
+
+**Variadic parameters.** The last parameter may be written `name ...T`; inside the function it has type
+`[]T`. A call passes the remaining arguments in a new slice, or a slice spread with `xs...`, which is passed
+without copying. `...` is valid only on the last argument and only for a variadic parameter. Generic
+functions, function literals, interface methods and function types cannot be variadic.
+
+**Results.** A function with a result must end in a terminating statement; otherwise the error is
+`missing return at end of function f returning int`. A function with a `T!` result may return a `T` or an
+`error`. An `async` function returns a `Task` of its declared result when called.
+
+Top-level functions are ordinary values of their function type and may be passed and stored. Their
+declaration order does not matter. Functions cannot be overloaded.
+
+### Method declarations
+
+Methods are declared inside the body of a struct or enum. The receiver is implicit and named `this`.
+
+- In a struct method, `this` is a pointer to the receiver: a method that assigns to `this.X` changes the
+  struct it was called on. A method can be called on a variable, a pointer or an addressable element.
+- In an enum method, `this` is a copy of the enum value.
+- `static func` declares a function in the struct's scope with no receiver, called as `Point.At(1, 2)`.
+  Enums have no static methods.
+- A method may have its own type parameters, also in a non-generic struct.
+
+**Method values.** `x.M` without a call is a function value bound to the receiver, which is evaluated once
+where `x.M` is written. A struct variable is bound by address, so the method sees later changes to it and
+its changes are visible in the variable. Pointers and interface values are captured as they are; enum
+values are copied. A method value of a struct field or element is an error, because it would keep an
+interior pointer: `cannot take the method value Inc of a struct field or element`.
+
+**Method expressions.** `T.M` for a struct type `T` is a function that takes the receiver `*T` as its first
+parameter: `Counter.Add` has type `func(*Counter, int) int`.
+
+```zell
+struct Counter {
+    n int
+
+    func Add(k int) int {
+        this.n += k
+        return this.n
+    }
+}
+
+func demo() {
+    var c = Counter{}
+    var bound = c.Add          // bound to &c
+    bound(1)
+    var add = Counter.Add      // func(*Counter, int) int
+    add(&c, 2)
+}
+```
+
+**Operator methods.** A struct or enum may define operators through methods with fixed names and
+signatures: `Add`, `Sub`, `Mul`, `Div`, `Rem`, `Neg`, `MatMul`, `Index`, `IndexSet`, `Equals` and
+`Compare`. The left operand selects the method. They are described with the operators.
+
+### Attributes
+
+```ebnf
+attribute      ::= AT qualified_name attribute_args? eos?
+attribute_args ::= LPAREN (attribute_arg (COMMA attribute_arg)*)? RPAREN
+attribute_arg  ::= (field_name COLON)? expr
+```
+
+An attribute attaches constant data to a declaration: a namespace (before `namespace`), struct,
+interface, enum, variant, field, method, function or parameter. An attribute is a struct marked
+`@attribute`; its fields are the attribute's parameters. Arguments are constant expressions, given by name
+or by position in field order. An omitted argument takes the field's default value, else its zero value.
+An unknown attribute is an error (`unknown attribute @nosuch`).
+
+```zell
+@attribute(targets: [reflect.Target.Field])
+struct column {
+    name string
+    @required size int
+    nullable bool = false
+}
+
+struct Row {
+    @column(name: "id", size: 8) Id int
+}
+```
+
+- `targets` restricts where the attribute may appear: `Namespace`, `Struct`, `Interface`, `Enum`,
+  `Variant`, `Field`, `Func`, `Param`. By default it may appear anywhere.
+- `repeatable: true` allows the attribute more than once on one declaration.
+- `@required` on a field of an attribute struct makes its argument mandatory:
+  `missing argument size for attribute @col (the field is @required)`.
+- Parameter types are the basic types, `string`, enums, slices of these, and other attribute structs.
+- An attribute is only data. It runs no code and does not change the generated code; libraries and the
+  compiler read it through reflection.
+- An attribute's visibility is that of its struct. Exported attributes of another namespace are written
+  with its path: `@zconf.Conf(…)`.
+
+Predeclared attributes:
+
+| Attribute | Meaning |
+|---|---|
+| `@attribute(targets:, repeatable:)` | declares an attribute struct |
+| `@required` | the field of an attribute struct must be given |
+| `@test` | a test function |
+| `@cfg(…)` | conditional compilation, below |
+| `@deprecated("why")` | marks a declaration deprecated |
+| `@inline` | asks for inlining |
+| `@reflect` | keeps the type's metadata, including methods, for run-time reflection |
+| `@embed("path")` | embeds a file into a top-level `var` or `const` at compile time |
+| `@allowCycle` | no reference-cycle warning `W0001` for the type |
+| `@acyclic` | promises that values of the type form no cycles |
+
+Libraries declare their own, such as `@json(name:, omitEmpty:, skip:)` and `@cli.flag(…)`.
+
+### Conditional compilation
+
+`@cfg(condition)` on a declaration (and on fields, methods and variants) includes it only when the
+condition holds for the target. Before `namespace` it applies to the whole file. Conditions:
+
+| Condition | Holds when |
+|---|---|
+| `os: "linux"` | the target OS is `linux`, `macos`, `windows`, `freebsd`, `android`, `ios` or `wasi` as given |
+| `arch: "amd64"` | the target architecture is `amd64`, `arm64` or `wasm32` as given |
+| `feature: "tls"` | the package feature is enabled |
+| `not(c)`, `any(c, …)`, `all(c, …)` | negation, disjunction, conjunction |
+
+Several arguments of one `@cfg` must all hold. An unknown key, OS or architecture is an error. A file
+whose name ends in `_linux`, `_macos`, `_windows`, `_amd64`, `_arm64` or an OS-architecture pair such as
+`_linux_arm64` is compiled only for that target, unless named explicitly on the command line.
+
+An excluded declaration is not type-checked and its name does not exist, so declarations for different
+targets may share a name:
+
+```zell
+@cfg(os: "windows")
+func lineEnding() string { return "\r\n" }
+
+@cfg(not(os: "windows"))
+func lineEnding() string { return "\n" }
+```
