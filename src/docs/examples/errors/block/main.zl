@@ -1,0 +1,17 @@
+namespace version
+
+import io
+
+func main() {
+    var parts = strings.Split("1.x.3", ".")
+    var major = 0
+    var minor = 0
+    try {
+        major = strings.ToInt(parts[0])?
+        minor = strings.ToInt(parts[1])?
+        println("parsed", major, minor)
+    } catch err {
+        println("bad version:", err)
+    }
+    println(major, minor)
+}

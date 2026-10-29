@@ -1,0 +1,85 @@
+This page takes you from an empty directory to a tested program with release binaries for three
+operating systems. It assumes Zell is [installed](/docs/get-started/install) and `zell version` works.
+
+## Run a single file
+
+A program is a namespace with a `main` function. Save this as `hello.zl`:
+
+<Example id="hello/first" />
+
+```sh
+zell run hello.zl
+```
+
+`zell run` compiles the file and runs it. Nothing else is needed for a script-sized program: no
+project file, no build configuration. `println` comes from the `io` namespace, which the `import` makes
+available.
+
+## Create a project
+
+Anything bigger than one file is a package: a directory with a `zell.toml` manifest.
+
+```sh
+zell init hello
+cd hello
+zell run
+```
+
+`zell init` writes two files. The manifest names the package, its namespace and its entry point:
+
+<Example id="hello/project" files={["zell.toml"]} output="none" />
+
+`zell run` with no arguments finds the package from the current directory. Every `.zl` file under `src/`
+with the same namespace belongs to it, so you can split code across files without imports between them.
+
+## Write a function and a test
+
+Replace `src/main.zl` with a function worth testing, and add `src/greeting_test.zl` beside it:
+
+<Example id="hello/project" files={["src/main.zl", "src/greeting_test.zl"]} />
+
+A test is a function marked `@test` that takes a `*testing.T`. Tests live next to the code they test, in
+the same namespace.
+
+```sh
+zell test -v
+```
+
+<Example id="hello/project" files={["src/greeting_test.zl"]} output="test" />
+
+Each test runs in its own process, so a failed assertion or even a panic ends only that test.
+`zell test --filter Greeting` selects tests by name; `--json` prints machine-readable events for CI.
+
+## Build a binary
+
+```sh
+zell build                # debug build: target/debug/hello
+zell build --release      # optimized:   target/release/hello
+```
+
+A release binary is self-contained: there is no runtime to install next to it and no garbage collector
+inside it. A hello-world release build is about 45 KB on Linux.
+
+## Build for other platforms
+
+Every toolchain archive can build for every supported target, from any host:
+
+```sh
+zell build --release --target linux-amd64
+zell build --release --target windows-amd64
+zell build --release --target macos-arm64
+```
+
+The output goes to `target/release/`, named for the target's conventions (`hello.exe` on Windows).
+`--target linux-amd64-musl` produces a fully static Linux binary that runs on any distribution.
+
+<Callout type="go">
+`GOOS=linux GOARCH=amd64 go build` becomes `zell build --target linux-amd64`. The runtime and the C parts
+of the standard library come prebuilt for every target in the archive, so there is no cgo-style C
+cross-compiler to set up.
+</Callout>
+
+## Next
+
+- [Errors](/docs/learn/errors): how a function that can fail says so, and how callers deal with it.
+- [Set up an editor](/docs/get-started/editors) for completion, refactorings and debugging.

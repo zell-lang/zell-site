@@ -1,0 +1,7 @@
+namespace hello
+
+import io
+
+func main() {
+    println("Hello, world!")
+}

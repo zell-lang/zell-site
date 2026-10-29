@@ -1,0 +1,4 @@
+=== RUN   TestGreeting
+--- PASS: TestGreeting (0.00s)
+PASS
+ok  	1 passed, 0 failed, 0 skipped (0.00s)

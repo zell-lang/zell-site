@@ -1,0 +1,38 @@
+{
+  "errors/block": {
+    "zell": "0.1.5",
+    "hash": "5437bb28"
+  },
+  "errors/handle": {
+    "zell": "0.1.5",
+    "hash": "8f880ef4"
+  },
+  "errors/propagate": {
+    "zell": "0.1.5",
+    "hash": "4062ac52"
+  },
+  "errors/results": {
+    "zell": "0.1.5",
+    "hash": "d8ba7a6a"
+  },
+  "errors/trace": {
+    "zell": "0.1.5",
+    "hash": "947d489d"
+  },
+  "errors/typed": {
+    "zell": "0.1.5",
+    "hash": "907076a3"
+  },
+  "errors/wrap": {
+    "zell": "0.1.5",
+    "hash": "3da12ee2"
+  },
+  "hello/first": {
+    "zell": "0.1.5",
+    "hash": "84b37bbf"
+  },
+  "hello/project": {
+    "zell": "0.1.5",
+    "hash": "9033ee30"
+  }
+}

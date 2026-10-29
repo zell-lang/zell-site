@@ -1,0 +1,30 @@
+namespace storage
+
+import io
+
+struct Timeout {
+    Ms int
+
+    func Message() string {
+        return "timeout after " + strconv.Itoa(this.Ms) + "ms"
+    }
+}
+
+func connect() void! {
+    return Timeout{Ms: 250}
+}
+
+func loadUsers() void! {
+    connect()?("connect to db")
+}
+
+func main() {
+    try loadUsers() catch err {
+        println(err)
+        var t Timeout
+        if errors.As(err, &t) {
+            println("retry with a timeout above", t.Ms, "ms")
+        }
+        println("cause:", errors.Unwrap(err))
+    }
+}

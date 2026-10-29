@@ -1,0 +1,22 @@
+namespace numbers
+
+import io
+
+func sum(lines []string) int {
+    var total = 0
+    for line in lines {
+        // catch must leave the block, so `n` is always set after it
+        var n = try strings.ToInt(line) catch err {
+            println("skipping:", err)
+            continue
+        }
+        total += n
+    }
+    return total
+}
+
+func main() {
+    println(sum(["1", "two", "3"]))
+    var retries = try strings.ToInt("") else 3
+    println(retries)
+}

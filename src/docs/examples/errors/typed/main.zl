@@ -1,0 +1,42 @@
+namespace accounts
+
+import io
+
+const ErrNotFound = error("account not found")
+
+struct InsufficientFunds {
+    Need int
+    Have int
+
+    func Message() string {
+        return "insufficient funds: need " + strconv.Itoa(this.Need) + ", have " + strconv.Itoa(this.Have)
+    }
+}
+
+func withdraw(id int, amount int) int! {
+    if id != 1 {
+        return ErrNotFound
+    }
+    var balance = 50
+    if amount > balance {
+        return InsufficientFunds{Need: amount, Have: balance}
+    }
+    return balance - amount
+}
+
+func report(id int, amount int) {
+    var left = try withdraw(id, amount) catch err {
+        switch err {
+            case InsufficientFunds f: println("short by", f.Need - f.Have)
+            default: println(err, "| not found:", errors.Is(err, ErrNotFound))
+        }
+        return
+    }
+    println("left:", left)
+}
+
+func main() {
+    report(1, 20)
+    report(1, 80)
+    report(2, 10)
+}

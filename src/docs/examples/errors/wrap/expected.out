@@ -1,0 +1,3 @@
+connect to db: timeout after 250ms
+retry with a timeout above 250 ms
+cause: timeout after 250ms

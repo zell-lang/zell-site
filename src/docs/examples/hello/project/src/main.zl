@@ -1,0 +1,15 @@
+namespace hello
+
+import io
+
+func Greeting(name string) string {
+    if name == "" {
+        return "Hello, world!"
+    }
+    return "Hello, " + name + "!"
+}
+
+func main() {
+    println(Greeting(""))
+    println(Greeting("Zell"))
+}

@@ -1,0 +1,22 @@
+namespace config
+
+import io
+
+func parsePort(s string) int! {
+    var port = strings.ToInt(s)?("port")
+    if port < 1 || port > 65535 {
+        return error("port out of range: " + strconv.Itoa(port))
+    }
+    return port
+}
+
+func listenAddr(host string, port string) string! {
+    return host + ":" + strconv.Itoa(parsePort(port)?("listen address"))
+}
+
+func main() {
+    println(try listenAddr("localhost", "8080") else "?")
+    try listenAddr("localhost", "http") catch err {
+        println("error:", err)
+    }
+}

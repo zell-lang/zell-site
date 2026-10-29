@@ -1,0 +1,7 @@
+node_modules/
+dist/
+public/api/config.php
+*.local
+.env.deploy
+target/
+src/docs/examples/**/zell.lock

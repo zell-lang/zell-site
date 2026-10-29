@@ -1,0 +1,71 @@
+{
+  "sections": [
+    {
+      "id": "get-started",
+      "title": "Get started",
+      "summary": "Install the toolchain, write and test a first program, set up an editor.",
+      "items": [
+        { "slug": "install", "title": "Install Zell", "status": "ready", "summary": "The one-line installer, archives for every platform, and checking the result." },
+        { "slug": "hello-world", "title": "Your first program", "status": "ready", "summary": "Create a project, run it, test it, and build release binaries for other platforms." },
+        { "slug": "editors", "title": "Set up an editor", "status": "planned", "summary": "The language server in VS Code, IntelliJ, Neovim and Helix: completion, refactorings, debugging." }
+      ]
+    },
+    {
+      "id": "learn",
+      "title": "Learn",
+      "summary": "The language from the ground up, one chapter at a time. Read in order, or jump to what you need.",
+      "items": [
+        { "slug": "basics", "title": "Variables, types and functions", "status": "planned", "summary": "var and const, inference, the built-in types, functions with several results, variadics, closures." },
+        { "slug": "control-flow", "title": "Control flow", "status": "planned", "summary": "if, for over ranges, slices and maps, switch, labels, defer." },
+        { "slug": "collections", "title": "Slices, maps and strings", "status": "planned", "summary": "Growing slices, slicing, maps with comma-ok lookup, strings as UTF-8 and the strings namespace." },
+        { "slug": "structs", "title": "Structs and methods", "status": "planned", "summary": "Fields, methods declared inside the struct, value and pointer receivers, embedding." },
+        { "slug": "interfaces", "title": "Interfaces", "status": "planned", "summary": "Implicit implementation, type switches, the any type and what a call through an interface costs." },
+        { "slug": "enums", "title": "Enums and pattern matching", "status": "planned", "summary": "Enums with data, exhaustive switch, binding variant fields." },
+        { "slug": "generics", "title": "Generics", "status": "planned", "summary": "Type parameters on functions, methods and types, constraints, and monomorphization." },
+        { "slug": "errors", "title": "Errors", "status": "draft", "summary": "Fallible results, ?, try, typed errors, wrapping and return traces." },
+        { "slug": "memory", "title": "Memory and resources", "status": "planned", "summary": "Reference counting with compile-time ownership, Drop, weak references and cycles." },
+        { "slug": "async", "title": "Async and tasks", "status": "planned", "summary": "async and await, tasks, channels, mutexes, cancellation and timeouts." },
+        { "slug": "packages", "title": "Namespaces and packages", "status": "planned", "summary": "Namespaces, imports, zell.toml, dependencies from Git and the lock file." },
+        { "slug": "reflection", "title": "Attributes and reflection", "status": "planned", "summary": "Attributes, compile-time reflection with Fields and TypesWith, and generating code from types." },
+        { "slug": "testing", "title": "Testing and benchmarks", "status": "planned", "summary": "@test functions, assertions, t.Must, benchmarks and running tests in CI." }
+      ]
+    },
+    {
+      "id": "guides",
+      "title": "Guides",
+      "summary": "Task-oriented walkthroughs: build something real with the standard library.",
+      "items": [
+        { "slug": "cli-tool", "title": "Build a command-line tool", "status": "planned", "summary": "Flags, reading files, exit codes, and shipping one binary per platform." },
+        { "slug": "http-service", "title": "Write an HTTP service", "status": "planned", "summary": "Routing, JSON requests and responses, middleware, graceful shutdown." },
+        { "slug": "json", "title": "Work with JSON", "status": "planned", "summary": "Typed parsing and formatting, attributes, and schema-less values." },
+        { "slug": "sql", "title": "Use a SQL database", "status": "planned", "summary": "database.sql with SQLite and PostgreSQL, typed queries, transactions." },
+        { "slug": "cross-compile", "title": "Cross-compile and release", "status": "planned", "summary": "Targets, static musl builds, Windows and macOS binaries from any host." },
+        { "slug": "debugging", "title": "Debug and profile", "status": "planned", "summary": "lldb and gdb with pretty-printers, panics and backtraces, CPU profiles, leak checks." }
+      ]
+    },
+    {
+      "id": "reference",
+      "title": "Reference",
+      "summary": "Exact descriptions for when you know what you are looking for.",
+      "items": [
+        { "slug": "spec", "title": "Language specification", "status": "planned", "summary": "The grammar and semantics of Zell, normative." },
+        { "slug": "stdlib", "title": "Standard library", "status": "planned", "summary": "Every namespace, type and function, generated from doc comments." },
+        { "slug": "cli", "title": "The zell command", "status": "planned", "summary": "build, run, test, check, fmt, doc, debug, install and the rest, with every option." },
+        { "slug": "manifest", "title": "zell.toml", "status": "planned", "summary": "Package, workspace and dependency fields of the manifest and the lock file." },
+        { "slug": "diagnostics", "title": "Compiler diagnostics", "status": "planned", "summary": "Every error and lint code with an example and the fix." },
+        { "slug": "platforms", "title": "Platforms and targets", "status": "planned", "summary": "Supported hosts and targets, their tiers and requirements." }
+      ]
+    },
+    {
+      "id": "concepts",
+      "title": "Concepts",
+      "summary": "How Zell works underneath, and why it was designed that way.",
+      "items": [
+        { "slug": "memory-model", "title": "Memory without a garbage collector", "status": "planned", "summary": "Ownership, reference counts, biased counting and the bounded cycle collector." },
+        { "slug": "error-traces", "title": "Error return traces", "status": "planned", "summary": "How an error records its path for one pointer per step, and what it costs." },
+        { "slug": "scheduler", "title": "The task scheduler", "status": "planned", "summary": "Workers, run queues, work stealing, the poller and structured cancellation." },
+        { "slug": "compilation", "title": "From source to binary", "status": "planned", "summary": "The compiler pipeline, LLVM, the runtime, and what ends up in an executable." }
+      ]
+    }
+  ]
+}

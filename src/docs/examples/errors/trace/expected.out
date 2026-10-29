@@ -1,0 +1,4 @@
+config: open app.toml: not found
+  open 
+  readConfig config
+  main 

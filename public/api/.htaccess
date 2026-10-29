@@ -1,0 +1,4 @@
+# Only the endpoints are reachable; helpers (_*.php) and the config are not.
+<FilesMatch "^(_.*|config.*)\.php$">
+  Require all denied
+</FilesMatch>

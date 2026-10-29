@@ -1,0 +1,137 @@
+{
+  "fetchedAt": "2026-10-29T21:53:09.918Z",
+  "latest": {
+    "version": "0.1.5",
+    "tag": "v0.1.5",
+    "name": "Zell v0.1.5",
+    "prerelease": false,
+    "publishedAt": "2026-10-29T20:06:35Z",
+    "url": "https://github.com/zell-lang/zell/releases/tag/v0.1.5",
+    "sumsUrl": "https://github.com/zell-lang/zell/releases/download/v0.1.5/SHA256SUMS",
+    "hosts": [
+      {
+        "id": "linux-amd64",
+        "os": "Linux",
+        "arch": "x86-64",
+        "files": [
+          {
+            "name": "zell-0.1.5-linux-amd64.tar.xz",
+            "url": "https://github.com/zell-lang/zell/releases/download/v0.1.5/zell-0.1.5-linux-amd64.tar.xz",
+            "size": 32056776,
+            "sha256": "3eeee55b24c1447f7e24828200d73df1ab2e1559b1c0aad6fe3426a1a4b17275"
+          }
+        ]
+      },
+      {
+        "id": "linux-arm64",
+        "os": "Linux",
+        "arch": "arm64",
+        "files": [
+          {
+            "name": "zell-0.1.5-linux-arm64.tar.xz",
+            "url": "https://github.com/zell-lang/zell/releases/download/v0.1.5/zell-0.1.5-linux-arm64.tar.xz",
+            "size": 32805600,
+            "sha256": "4bcc0558f9b799a84b4ca389ea93e0437c69913788c3999da4d7851886c7744f"
+          }
+        ]
+      },
+      {
+        "id": "macos-arm64",
+        "os": "macOS",
+        "arch": "Apple silicon",
+        "files": [
+          {
+            "name": "zell-0.1.5-macos-arm64.tar.xz",
+            "url": "https://github.com/zell-lang/zell/releases/download/v0.1.5/zell-0.1.5-macos-arm64.tar.xz",
+            "size": 26671532,
+            "sha256": "e12505d2634ad178b7fedeac9fddc8e6ea1dbb03005e1ab302514335d276a21c"
+          }
+        ]
+      },
+      {
+        "id": "macos-amd64",
+        "os": "macOS",
+        "arch": "Intel",
+        "files": [
+          {
+            "name": "zell-0.1.5-macos-amd64.tar.xz",
+            "url": "https://github.com/zell-lang/zell/releases/download/v0.1.5/zell-0.1.5-macos-amd64.tar.xz",
+            "size": 30326012,
+            "sha256": "531c3dd7d204f5046ad2a3e8bb46824150efde2703c419581e4c2f0c6dc3926e"
+          }
+        ]
+      },
+      {
+        "id": "windows-amd64",
+        "os": "Windows",
+        "arch": "x86-64",
+        "files": [
+          {
+            "name": "zell-0.1.5-windows-amd64.tar.xz",
+            "url": "https://github.com/zell-lang/zell/releases/download/v0.1.5/zell-0.1.5-windows-amd64.tar.xz",
+            "size": 41531180,
+            "sha256": "cee12617eabb2373c1e454263d80b5bcf6df48a3278877612b2f28779c425980"
+          },
+          {
+            "name": "zell-0.1.5-windows-amd64.tar.gz",
+            "url": "https://github.com/zell-lang/zell/releases/download/v0.1.5/zell-0.1.5-windows-amd64.tar.gz",
+            "size": 73451959,
+            "sha256": "d75d33a2b75254f7a3fbadf394aa8162561ebb0a8393edc92536c1e98e2e5852"
+          }
+        ]
+      }
+    ],
+    "runtimes": [
+      {
+        "triple": "aarch64-apple-darwin",
+        "name": "zell-runtime-0.1.5-aarch64-apple-darwin.tar.gz",
+        "url": "https://github.com/zell-lang/zell/releases/download/v0.1.5/zell-runtime-0.1.5-aarch64-apple-darwin.tar.gz",
+        "size": 688672,
+        "sha256": "1d00ea90827f2d306e9b2956af3c466a75c73542c36974b5ff2f16a5ab26ec71"
+      },
+      {
+        "triple": "aarch64-unknown-linux-gnu",
+        "name": "zell-runtime-0.1.5-aarch64-unknown-linux-gnu.tar.gz",
+        "url": "https://github.com/zell-lang/zell/releases/download/v0.1.5/zell-runtime-0.1.5-aarch64-unknown-linux-gnu.tar.gz",
+        "size": 937567,
+        "sha256": "feabc1b6b4b052d8d4ffceaf23ef0a0648e139100483dc06e537d8b8569f502c"
+      },
+      {
+        "triple": "aarch64-unknown-linux-musl",
+        "name": "zell-runtime-0.1.5-aarch64-unknown-linux-musl.tar.gz",
+        "url": "https://github.com/zell-lang/zell/releases/download/v0.1.5/zell-runtime-0.1.5-aarch64-unknown-linux-musl.tar.gz",
+        "size": 1392409,
+        "sha256": "367be139e7513a40db4cccd3ee539dbaafabd0096adf934dce9801a6ad37d4a3"
+      },
+      {
+        "triple": "x86_64-apple-darwin",
+        "name": "zell-runtime-0.1.5-x86_64-apple-darwin.tar.gz",
+        "url": "https://github.com/zell-lang/zell/releases/download/v0.1.5/zell-runtime-0.1.5-x86_64-apple-darwin.tar.gz",
+        "size": 684879,
+        "sha256": "d2ca2406a3888d3715183f2efbdb10b323f0f187115dad51c23c92ab2459eaf9"
+      },
+      {
+        "triple": "x86_64-pc-windows-gnu",
+        "name": "zell-runtime-0.1.5-x86_64-pc-windows-gnu.tar.gz",
+        "url": "https://github.com/zell-lang/zell/releases/download/v0.1.5/zell-runtime-0.1.5-x86_64-pc-windows-gnu.tar.gz",
+        "size": 2691717,
+        "sha256": "0bdb1074365b106fbccf301282df656077a74f79804b2dc47d4abc1a649bbf13"
+      },
+      {
+        "triple": "x86_64-unknown-linux-gnu",
+        "name": "zell-runtime-0.1.5-x86_64-unknown-linux-gnu.tar.gz",
+        "url": "https://github.com/zell-lang/zell/releases/download/v0.1.5/zell-runtime-0.1.5-x86_64-unknown-linux-gnu.tar.gz",
+        "size": 944083,
+        "sha256": "e6065c7d196bc8f29dff04521e3cec884434326326e5b430d859f57ff563fddf"
+      },
+      {
+        "triple": "x86_64-unknown-linux-musl",
+        "name": "zell-runtime-0.1.5-x86_64-unknown-linux-musl.tar.gz",
+        "url": "https://github.com/zell-lang/zell/releases/download/v0.1.5/zell-runtime-0.1.5-x86_64-unknown-linux-musl.tar.gz",
+        "size": 1389850,
+        "sha256": "c0ec4253708d8012dc5a246f2c55ef7285746e576a0739c2661f0296fe3f06fe"
+      }
+    ]
+  },
+  "preview": null
+}

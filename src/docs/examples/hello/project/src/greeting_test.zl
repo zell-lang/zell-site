@@ -1,0 +1,6 @@
+namespace hello
+
+@test func TestGreeting(t *testing.T) {
+    testing.Equal(t, Greeting(""), "Hello, world!")
+    testing.Equal(t, Greeting("Ann"), "Hello, Ann!")
+}

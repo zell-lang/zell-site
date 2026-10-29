@@ -1,0 +1,20 @@
+namespace app
+
+import io
+
+func open(path string) string! {
+    return error("open " + path + ": not found")
+}
+
+func readConfig() string! {
+    return open("app.toml")?("config")
+}
+
+func main() {
+    try readConfig() catch err {
+        println(err)
+        for f in errors.Frames(err) {
+            println(" ", f.Func, f.Context)
+        }
+    }
+}

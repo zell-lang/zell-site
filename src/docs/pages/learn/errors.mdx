@@ -1,0 +1,82 @@
+Zell has no exceptions. A function that can fail says so in its result type, and the caller decides
+on the spot: pass the error up, handle it, or substitute a default. Every form fits on one line.
+
+| You write | Meaning |
+|---|---|
+| `func f() T!` | `f` returns a `T` or an error; `void!` is nothing or an error |
+| `f()?` | the value, or return the error from the current function |
+| `f()?("context")` | the same, with a line of context added to the message |
+| `try f() catch err { … }` | handle the error here |
+| `try f() else v` | use `v` when `f` fails |
+| `try { … } catch err { … }` | handle the errors of a whole block |
+
+## Fallible results
+
+`T!` reads "a `T`, or an error". Inside such a function, `return` accepts either: `error("message")`
+creates an error, any other value of type `T` is the result.
+
+<Example id="errors/results" />
+
+A `T!` value has to be dealt with. Assigning it to a plain variable does not compile, so an ignored
+error is always visible in the code as `_ = f()`.
+
+## Passing errors up with `?`
+
+`?` after a call unwraps the value or returns the error to the caller. `?("context")` does the same and
+puts a line in front of the message, so the error explains where it came from.
+
+<Example id="errors/propagate" />
+
+`?` works only inside a function whose result is `T!`, or inside a block `try` (below). `main` may
+return `void!`: an error that reaches it is printed with its trace, and the program exits with status 1.
+
+<Callout type="go">
+Each `?` replaces an `if err != nil { return …, fmt.Errorf("context: %w", err) }` block.
+The error still is a value: there is no unwinding and no hidden control flow.
+</Callout>
+
+## Handling errors
+
+`try … catch` names the error and handles it. When `try` produces a value, the `catch` block must leave
+the surrounding block (`return`, `continue`, `break` or `panic`), so the variable after it is always
+initialized. `try … else` substitutes a default and drops the error.
+
+<Example id="errors/handle" />
+
+The block form covers several steps at once: inside the block, `?` jumps to the `catch` instead of
+returning from the function.
+
+<Example id="errors/block" />
+
+## Errors with data
+
+`error` is a built-in interface with one method, `Message() string`. Any struct with that method is an
+error and can carry fields. A `switch` on the error picks the type apart; constant errors serve as
+sentinels and are compared with `errors.Is`.
+
+<Example id="errors/typed" />
+
+## Wrapping and unwrapping
+
+Context added with `?("…")` wraps the original error rather than replacing it. `errors.Is` and
+`errors.As` search the whole chain, and `errors.Unwrap` returns the next link.
+
+<Example id="errors/wrap" />
+
+## Return traces
+
+Every error records where it was created and each `?` it passed through, at the cost of one pointer per
+step, with no stack unwinding. `println(err)` shows only the message; `errors.Frames(err)` returns the
+path as records and `errors.Trace(err)` as text with files and lines.
+
+<Example id="errors/trace" />
+
+<Callout type="tip">
+Traces are on by default. In a hot loop that uses errors for control flow, build with
+`--no-error-trace`; `errors.Trace` then returns an empty string.
+</Callout>
+
+## Next
+
+[Memory and resources](/docs/learn/memory): how values are freed without a garbage collector, and how
+`Drop` and `defer` release what a function holds, on every path including errors.

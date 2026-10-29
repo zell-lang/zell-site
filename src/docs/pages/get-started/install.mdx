@@ -1,0 +1,70 @@
+Zell ships as one self-contained archive per platform: the compiler, the runtime, a linker and
+the link inputs for every target. There is no C compiler, SDK or system package to install
+first, and any host can build for every supported target. The current release is **<Version />**.
+
+## Install with one command
+
+<InstallCommand />
+
+The script picks the archive for your system, checks its SHA-256 and unpacks it:
+
+| | Linux and macOS | Windows |
+|---|---|---|
+| Toolchain | `~/.zell/toolchain/zell-<version>-<host>/` | `%USERPROFILE%\.zell\toolchain\zell-<version>-<host>\` |
+| Commands | `zell`, `zell-lsp` and `zell-mcp` linked into `~/.local/bin` | `bin\` added to the user `PATH` |
+| Active version | `~/.zell/toolchain/current` points at it | the newest install is first on `PATH` |
+
+<Callout type="tip">
+If `~/.local/bin` is not on your `PATH`, the script prints the line to add to your shell profile.
+On Windows, open a new terminal so that it picks up the changed `PATH`.
+</Callout>
+
+### A specific version or a pre-release
+
+Pre-releases are never installed by default. Name the version instead:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/zell-lang/zell/master/scripts/install.sh | sh -s -- --version 0.1.5
+```
+
+`--dir` and `--bin` (or `$ZELL_TOOLCHAIN_DIR` and `$ZELL_BIN_DIR`) change where the toolchain and the
+links go. On Windows, save the script and run `.\install.ps1 -Version 0.1.5`.
+
+## Check the installation
+
+```sh
+zell version
+zell doctor
+```
+
+`zell version` prints the compiler version. `zell doctor` checks that the linker, the standard library
+and the link inputs of every target are in place; it prints nothing alarming on a complete install.
+
+## Install from an archive
+
+To install without the script, download the archive for your platform and `SHA256SUMS` from the
+[download page](/download), check the archive, unpack it anywhere and put its `bin` directory on `PATH`:
+
+```sh
+sha256sum --ignore-missing -c SHA256SUMS      # macOS: shasum -a 256 --ignore-missing -c SHA256SUMS
+tar xf zell-0.1.5-linux-amd64.tar.xz
+export PATH="$PWD/zell-0.1.5-linux-amd64/bin:$PATH"
+zell doctor
+```
+
+<Callout type="warning" title="macOS: unsigned binaries">
+The macOS binaries are not signed yet. If Gatekeeper refuses to run a manually downloaded toolchain,
+remove the quarantine attribute from the unpacked directory:
+`xattr -dr com.apple.quarantine zell-0.1.5-macos-arm64`.
+</Callout>
+
+## Update or remove
+
+Run the install command again to update; each version gets its own directory, and the new one becomes
+active. To remove Zell, delete `~/.zell` (`%USERPROFILE%\.zell` on Windows) and the links in
+`~/.local/bin`, or the `PATH` entry on Windows.
+
+## Next
+
+[Write your first program](/docs/get-started/hello-world): create a project, run it, add a test and
+build it for another platform.
