@@ -1,0 +1,21 @@
+namespace capture
+
+import io
+
+func main() {
+    // A closure captures variables, not their values at creation time.
+    var total = 0
+    var add = (n int) => { total += n }
+    add(5)
+    add(10)
+    println("total:", total)
+
+    // Each loop iteration has its own variable, as in Go 1.22+.
+    var printers []func()
+    for i in 0..3 {
+        printers = append(printers, () => println("i =", i))
+    }
+    for p in printers {
+        p()
+    }
+}

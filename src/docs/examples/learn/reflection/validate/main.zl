@@ -1,0 +1,41 @@
+namespace signup
+
+import io
+import reflect
+
+@attribute(targets: [reflect.Target.Field])
+struct length {
+    min int
+    max int
+}
+
+// Validate checks every field with @length; the loop is unrolled per field of T.
+func Validate<T>(v T) []string {
+    var problems []string = []
+    for f in reflect.Fields<T>() {
+        var rule = f.Attribute<length>()    // a compile-time constant in each copy
+        if rule != nil {
+            if f.Type.Kind != reflect.Kind.String {
+                reflect.Error("@length on field " + f.Name + " needs a string")
+            }
+            var n = len(f.Get(v))           // v.Login, v.Password: direct field reads
+            if n < rule.min || n > rule.max {
+                problems = append(problems, fmt.Format("{0}: {1} characters, want {2} to {3}", f.Name, n, rule.min, rule.max))
+            }
+        }
+    }
+    return problems
+}
+
+struct Account {
+    @length(min: 3, max: 16) Login    string
+    @length(8, 64)           Password string    // positional arguments, in field order
+    Age int
+}
+
+func main() {
+    for p in Validate(Account{Login: "al", Password: "secret", Age: 30}) {
+        println(p)
+    }
+    println(len(Validate(Account{Login: "alice", Password: "correct horse"})), "problems")
+}

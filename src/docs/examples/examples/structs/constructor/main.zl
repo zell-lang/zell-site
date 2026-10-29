@@ -1,0 +1,37 @@
+namespace accounts
+
+import io
+
+struct Account {
+    Owner   string
+    balance int
+
+    // A constructor that can fail returns T!.
+    static func Open(owner string, deposit int) Account! {
+        if owner == "" {
+            return error("owner is required")
+        }
+        if deposit < 0 {
+            return error("negative deposit")
+        }
+        return Account{Owner: owner, balance: deposit}
+    }
+
+    func Deposit(amount int) {
+        this.balance += amount
+    }
+
+    func Balance() int {
+        return this.balance
+    }
+}
+
+func main() {
+    var a = try Account.Open("ann", 100) else Account{}
+    a.Deposit(25)
+    println(a.Owner, a.Balance())
+
+    try Account.Open("", 5) catch err {
+        println("error:", err)
+    }
+}

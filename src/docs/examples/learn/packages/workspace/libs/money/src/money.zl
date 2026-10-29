@@ -1,0 +1,31 @@
+namespace money
+
+// Amount is a sum of money in cents.
+struct Amount {
+    cents int
+
+    func String() string {
+        return strconv.Itoa(this.cents / 100) + "." + pad(this.cents % 100)
+    }
+}
+
+// Cents makes an Amount.
+func Cents(n int) Amount {
+    return Amount{cents: n}
+}
+
+// Sum adds amounts.
+func Sum(xs []Amount) Amount {
+    var total = 0
+    for x in xs {
+        total += x.cents
+    }
+    return Amount{cents: total}
+}
+
+func pad(n int) string {
+    if n < 10 {
+        return "0" + strconv.Itoa(n)
+    }
+    return strconv.Itoa(n)
+}

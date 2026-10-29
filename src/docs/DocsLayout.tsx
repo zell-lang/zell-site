@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { SECTIONS, STATUS_LABEL } from "./nav";
+import StdlibNav, { stdlibKeys } from "./stdlib/StdlibNav";
 
 /** The section of a /docs/<section>/... path, if any. */
 const sectionOf = (pathname: string) => pathname.match(/^\/docs\/([^/]+)/)?.[1];
@@ -11,11 +12,12 @@ export default function DocsLayout() {
   const current = sectionOf(pathname);
   const [open, setOpen] = useState(false);
   // Expanded sections: the current one always, plus whatever the reader opened.
-  const [expanded, setExpanded] = useState<Set<string>>(() => new Set(current ? [current] : []));
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set([...(current ? [current] : []), ...stdlibKeys(pathname)]));
 
   useEffect(() => {
     setOpen(false);
-    if (current) setExpanded(e => (e.has(current) ? e : new Set(e).add(current)));
+    const want = [...(current ? [current] : []), ...stdlibKeys(pathname)];
+    setExpanded(e => (want.every(k => e.has(k)) ? e : new Set([...e, ...want])));
   }, [pathname, current]);
 
   const toggle = (id: string) =>
@@ -45,7 +47,7 @@ export default function DocsLayout() {
                 </button>
                 <ul id={`nav-${s.id}`} hidden={!isOpen}>
                   <li><NavLink end to={`/docs/${s.id}`}>Overview</NavLink></li>
-                  {s.items.map(i => (
+                  {s.items.map(i => s.id === "reference" && i.slug === "stdlib" ? <StdlibNav key={i.slug} expanded={expanded} toggle={toggle} /> : (
                     <li key={i.slug}>
                       <NavLink to={`/docs/${s.id}/${i.slug}`} className={i.status}>
                         {i.title}

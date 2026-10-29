@@ -1,0 +1,4 @@
+circle(r=2) 12.57
+rect(3x1.5) 4.50
+point 0.00
+[circle(r=2) rect(3x1.5) point]

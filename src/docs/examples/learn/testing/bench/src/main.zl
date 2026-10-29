@@ -1,0 +1,19 @@
+namespace csvline
+
+import io
+
+// Join joins fields into one CSV line.
+func Join(fields []string) string {
+    var b = strings.Builder{}
+    for i, f in fields {
+        if i > 0 {
+            b.Write(",")
+        }
+        b.Write(f)
+    }
+    return b.String()
+}
+
+func main() {
+    println(Join(["id", "name", "email"]))
+}

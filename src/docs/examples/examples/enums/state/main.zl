@@ -1,0 +1,34 @@
+namespace traffic
+
+import io
+
+enum Light {
+    Red, Green, Yellow
+
+    // A method returns a new value; it cannot change `this`.
+    func Next() Light {
+        switch this {
+            case Light.Red: return Light.Green
+            case Light.Green: return Light.Yellow
+            case Light.Yellow: return Light.Red
+        }
+    }
+
+    func Seconds() int {
+        switch this {
+            case Light.Red: return 30
+            case Light.Green: return 25
+            case Light.Yellow: return 5
+        }
+    }
+}
+
+func main() {
+    var l = Light.Red
+    var elapsed = 0
+    for _ in 0..4 {
+        println(elapsed, l)
+        elapsed += l.Seconds()
+        l = l.Next()
+    }
+}

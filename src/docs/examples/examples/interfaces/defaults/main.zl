@@ -1,0 +1,38 @@
+namespace ranking
+
+import io
+
+// A default method is written in terms of the other methods.
+interface Scored {
+    func Score() int
+    func Grade() string {
+        if this.Score() >= 90 { return "A" }
+        if this.Score() >= 75 { return "B" }
+        return "C"
+    }
+}
+
+struct Student {
+    Name   string
+    Points int
+    func Score() int { return this.Points }
+}
+
+struct Team {
+    Members []Student
+    func Score() int {
+        return slices.Reduce(this.Members, 0, (acc int, s Student) => acc + s.Points) / len(this.Members)
+    }
+    // Overrides the default.
+    func Grade() string { return "team " + strconv.Itoa(this.Score()) }
+}
+
+func main() {
+    var ann = Student{Name: "ann", Points: 93}
+    var bob = Student{Name: "bob", Points: 70}
+    var all []Scored = [ann, bob, Team{Members: [ann, bob]}]
+    slices.SortBy(all, (s Scored) => s.Score())
+    for s in all {
+        println(s.Score(), s.Grade())
+    }
+}

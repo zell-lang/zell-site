@@ -1,0 +1,46 @@
+Type parameters let one function or type work for many types. Each instantiation is compiled
+separately, so generic code runs as fast as code written for one type. [Generics](/docs/learn/generics)
+explains constraints and inference.
+
+## Generic functions
+
+The constraint after `:` says what the body may do with `T`. Type arguments are usually inferred.
+
+<Example id="examples/generics/functions" />
+
+## A generic container
+
+<Example id="examples/generics/stack" />
+
+## Several type parameters
+
+Inside generic code an instance is written with its arguments, as in `Pair<B, A>{...}`.
+
+<Example id="examples/generics/pair" />
+
+## A generic enum
+
+<Example id="examples/generics/option" />
+
+## Constraints from interfaces and operators
+
+An interface works as a constraint, and so do the built-in operator constraints such as `Add`.
+
+<Example id="examples/generics/constraint" />
+
+## Writing helpers
+
+A lambda passed to a generic function can leave out its parameter types once `T` is known.
+
+<Example id="examples/generics/helpers" />
+
+## Standard collections
+
+`collections` has generic `List`, `Set`, `Map`, `Queue` and `Stack`. `Set` and `Map` iterate in
+insertion order.
+
+<Example id="examples/generics/collections" />
+
+## Next
+
+[Errors](/docs/examples/errors): returning, propagating, wrapping and inspecting errors.

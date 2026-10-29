@@ -1,0 +1,10 @@
+open a.txt
+work on a.txt
+close a.txt
+5
+open b.txt
+close b.txt
+-1
+status: done
+deferred second, step 2
+deferred first, step 1

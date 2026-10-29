@@ -1,0 +1,18 @@
+namespace api
+
+import io
+import encoding.json
+
+struct User {
+    @json(name: "id")                 Id    int
+    @json(name: "email", omitEmpty: true) Email string
+    @json(skip: true)                 Password string
+    Name string
+}
+
+func main() void! {
+    var u = User{Id: 7, Password: "hunter2", Name: "Ann"}
+    println(json.Format(u))
+    var back = json.Parse<User>("{\"id\": 8, \"email\": \"bob@example.com\", \"Name\": \"Bob\"}")?
+    println(back.Id, back.Email, back.Name, back.Password == "")
+}

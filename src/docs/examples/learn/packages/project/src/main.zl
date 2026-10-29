@@ -1,0 +1,14 @@
+namespace trips
+
+import io
+import trips.geo
+
+func main() {
+    var route = [
+        Point{Lat: 52.52, Lon: 13.40},      // geo.Point, through the import
+        Point{Lat: 48.85, Lon: 2.35},
+        Point{Lat: 41.90, Lon: 12.50},
+    ]
+    println("legs:", legs(route))
+    println("total:", Round(totalKm(route)), "km")
+}

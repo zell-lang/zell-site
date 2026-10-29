@@ -1,0 +1,5 @@
+=== RUN   ExampleBytes
+--- PASS: ExampleBytes (0.01s)  .\src\units_test.zl:5
+=== RUN   ExampleBytes_unordered
+--- PASS: ExampleBytes_unordered (0.01s)  .\src\units_test.zl:15
+ok  	2 examples passed, 0 failed (0.02s)

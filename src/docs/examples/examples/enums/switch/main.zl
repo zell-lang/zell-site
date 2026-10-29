@@ -1,0 +1,26 @@
+namespace levels
+
+import io
+
+enum Level { Debug, Info, Warn, Error }
+
+// A switch that covers every variant needs no return after it.
+func prefix(l Level) string {
+    switch l {
+        case Level.Debug: return "[D]"
+        case Level.Info: return "[I]"
+        case Level.Warn, Level.Error: return "[!]"
+    }
+}
+
+func main() {
+    var min = Level.Info
+    for l in [Level.Debug, Level.Info, Level.Warn, Level.Error] {
+        // Enums have no order; compare their positions.
+        if int(l) >= int(min) {
+            println(prefix(l), l, int(l))
+        }
+    }
+    var zero Level
+    println("zero value:", zero, zero == Level.Debug)
+}

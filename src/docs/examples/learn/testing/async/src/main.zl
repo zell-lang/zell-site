@@ -1,0 +1,16 @@
+namespace cache
+
+import io
+
+// Load fetches a value; it waits as a network call would.
+async func Load(key string) string! {
+    await task.Delay(1)
+    if key == "" {
+        return error("empty key")
+    }
+    return "value of " + key
+}
+
+async func main() void! {
+    println(await Load("a")?)
+}

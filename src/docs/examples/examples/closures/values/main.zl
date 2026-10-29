@@ -1,0 +1,26 @@
+namespace calc
+
+import io
+
+func add(a int, b int) int { return a + b }
+
+func main() {
+    // Functions are values of type func(...) result.
+    var ops = map[string]func(int, int) int{
+        "+": add,
+        "-": (a int, b int) => a - b,
+        "*": (a int, b int) => a * b,
+        "max": func(a int, b int) int {
+            if a > b { return a }
+            return b
+        },
+    }
+
+    for name in ["+", "-", "*", "max"] {
+        var f = ops[name]
+        println(7, name, 3, "=", f(7, 3))
+    }
+
+    var f, ok = ops["/"]
+    println(ok, f == nil)
+}

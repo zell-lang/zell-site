@@ -1,0 +1,52 @@
+Short programs built around structs: constructors, methods that change their receiver, pointers,
+embedding and printing. [Structs and methods](/docs/learn/structs) explains the rules behind them.
+
+## A constructor that validates
+
+A `static func` belongs to the type. One that can fail returns `T!`, so the caller cannot get an
+invalid value.
+
+<Example id="examples/structs/constructor" />
+
+## Methods that change state
+
+Inside a method `this` points at the original, so `Push` and `Pop` change the variable they are called
+on.
+
+<Example id="examples/structs/stack" />
+
+## Pointers: a linked list
+
+`new Node{...}` allocates on the heap and returns a `*Node`; `nil` ends the list. A type that points to
+itself could form a cycle, so the compiler warns about it; `@allowCycle` records that this code never
+links a node back.
+
+<Example id="examples/structs/linked" />
+
+## Chaining methods
+
+A method that returns `this` (a `*T`) lets calls be chained.
+
+<Example id="examples/structs/builder" />
+
+## Embedding shared fields
+
+<Example id="examples/structs/embedding" />
+
+## Printing with String()
+
+A `String() string` method is used by `println`, `fmt.Format` and `fmt.Sprintf`, also for structs
+inside slices and inside other `String` methods.
+
+<Example id="examples/structs/printing" />
+
+## Comparing and sorting
+
+`Compare` gives a struct `<` and `>` and satisfies the `Ordered` constraint, so `slices.Sort` and
+`slices.Max` accept it. `Equals` gives `==`.
+
+<Example id="examples/structs/ordering" />
+
+## Next
+
+[Interfaces](/docs/examples/interfaces): several types behind one set of methods.

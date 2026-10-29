@@ -1,0 +1,31 @@
+namespace cleanup
+
+import io
+
+func process(name string, fail bool) int! {
+    println("open", name)
+    // Runs when the function returns, on every path.
+    defer println("close", name)
+
+    if fail {
+        return error("cannot process " + name)
+    }
+    println("work on", name)
+    return len(name)
+}
+
+func main() {
+    // Deferred calls run last-in, first-out; arguments are evaluated at once.
+    var step = 1
+    defer println("deferred first, step", step)
+    step = 2
+    defer println("deferred second, step", step)
+
+    println(try process("a.txt", false) else -1)
+    println(try process("b.txt", true) else -1)
+
+    // A deferred closure sees the variable's final value.
+    var status = "running"
+    defer func() { println("status:", status) }()
+    status = "done"
+}

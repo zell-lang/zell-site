@@ -1,0 +1,26 @@
+namespace signup
+
+import io
+
+// Return an error from the first check that fails.
+func checkPassword(p string) void! {
+    if len(p) < 8 {
+        return error("password is shorter than 8 characters")
+    }
+    if strings.ToLower(p) == p {
+        return error("password needs an uppercase letter")
+    }
+    if !strings.ContainsAny(p, "0123456789") {
+        return error("password needs a digit")
+    }
+}
+
+func main() {
+    for p in ["abc", "lowercase1", "NoDigitsHere", "Secret123"] {
+        try checkPassword(p) catch err {
+            println(p, "->", err)
+            continue
+        }
+        println(p, "-> ok")
+    }
+}

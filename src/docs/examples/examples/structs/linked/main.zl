@@ -1,0 +1,53 @@
+namespace linked
+
+import io
+
+// @allowCycle: this list never links a node back to an earlier one.
+@allowCycle
+struct Node {
+    Value int
+    Next  *Node
+}
+
+// A singly linked list built from pointers; nil ends it.
+struct List {
+    head *Node
+    size int
+
+    func PushFront(v int) {
+        this.head = new Node{Value: v, Next: this.head}
+        this.size += 1
+    }
+
+    func Reverse() {
+        var prev *Node = nil
+        var cur = this.head
+        for cur != nil {
+            var next = cur.Next
+            cur.Next = prev
+            prev = cur
+            cur = next
+        }
+        this.head = prev
+    }
+
+    func Items() []int {
+        var out []int
+        var n = this.head
+        for n != nil {
+            out = append(out, n.Value)
+            n = n.Next
+        }
+        return out
+    }
+}
+
+func main() {
+    var l = List{}
+    for v in 1..5 {
+        l.PushFront(v)
+    }
+    println(l.Items(), l.size)
+    l.Reverse()
+    println(l.Items())
+}

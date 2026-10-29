@@ -1,0 +1,47 @@
+namespace lexer
+
+import io
+
+enum Token {
+    Number(value int)
+    Op(symbol char)
+    LParen, RParen
+}
+
+// Split "12+(3*4)" into tokens.
+func lex(src string) []Token {
+    var out []Token
+    var num = -1
+    for ch in src {
+        if ch >= '0' && ch <= '9' {
+            if num < 0 {
+                num = 0
+            }
+            num = num * 10 + (ch - '0')
+            continue
+        }
+        if num >= 0 {
+            out = append(out, Token.Number(num))
+            num = -1
+        }
+        switch ch {
+            case '(': out = append(out, Token.LParen)
+            case ')': out = append(out, Token.RParen)
+            default: out = append(out, Token.Op(ch))
+        }
+    }
+    if num >= 0 {
+        out = append(out, Token.Number(num))
+    }
+    return out
+}
+
+func main() {
+    for t in lex("12+(3*40)") {
+        switch t {
+            case Token.Number(v): println("number", v)
+            case Token.Op(s): println("op", s)
+            case Token.LParen, Token.RParen: println("paren")
+        }
+    }
+}

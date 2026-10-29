@@ -1,0 +1,32 @@
+namespace money
+
+import io
+
+struct Money {
+    Cents    int
+    Currency string
+
+    // println, fmt.Format and fmt.Sprintf use String() when it exists.
+    func String() string {
+        return fmt.Sprintf("%d.%02d %s", this.Cents / 100, this.Cents % 100, this.Currency)
+    }
+}
+
+struct Line {
+    Item  string
+    Price Money
+
+    func String() string {
+        return fmt.Format("{0}: {1}", this.Item, this.Price)
+    }
+}
+
+func main() {
+    var m = Money{Cents: 1999, Currency: "EUR"}
+    println(m)
+    println(fmt.Format("total {0}", Money{Cents: 5, Currency: "USD"}))
+
+    var lines = [Line{Item: "book", Price: m}, Line{Item: "pen", Price: Money{Cents: 250, Currency: "EUR"}}]
+    println(lines[1])
+    println(lines)
+}

@@ -1,0 +1,6 @@
+=== RUN   TestLoad
+--- PASS: TestLoad (0.04s)
+=== RUN   TestLoadMany
+--- PASS: TestLoadMany (0.03s)
+PASS
+ok  	2 passed, 0 failed, 0 skipped (0.07s)

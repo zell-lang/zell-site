@@ -1,0 +1,39 @@
+namespace stacks
+
+import io
+
+// Methods change the struct they are called on: `this` is a pointer.
+struct IntStack {
+    items []int
+
+    func Push(x int) {
+        this.items = append(this.items, x)
+    }
+
+    func Pop() int! {
+        if len(this.items) == 0 {
+            return error("pop from empty stack")
+        }
+        var top = this.items[len(this.items) - 1]
+        this.items = this.items[..len(this.items) - 1]
+        return top
+    }
+
+    func Len() int {
+        return len(this.items)
+    }
+}
+
+func main() {
+    var s = IntStack{}
+    for x in [1, 2, 3] {
+        s.Push(x)
+    }
+    println("len:", s.Len())
+    for s.Len() > 0 {
+        println(try s.Pop() else -1)
+    }
+    try s.Pop() catch err {
+        println("error:", err)
+    }
+}

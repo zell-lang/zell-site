@@ -1,0 +1,16 @@
+namespace trips
+
+import trips.geo
+
+// Same namespace as main.zl: these functions are visible there without an import.
+func legs(route []Point) int {
+    return len(route) - 1
+}
+
+func totalKm(route []Point) float {
+    var total = 0.0
+    for i in 1..len(route) {
+        total += geo.DistanceKm(route[i - 1], route[i])   // the full path works too
+    }
+    return total
+}

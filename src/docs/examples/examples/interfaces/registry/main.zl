@@ -1,0 +1,30 @@
+namespace commands
+
+import io
+
+interface Command {
+    func Run(args []string) string
+}
+
+struct Echo {
+    func Run(args []string) string { return strings.Join(args, " ") }
+}
+
+struct Count {
+    func Run(args []string) string { return fmt.Format("{0} args", len(args)) }
+}
+
+func main() {
+    // A map from names to implementations.
+    var commands = map[string]Command{"echo": Echo{}, "count": Count{}}
+
+    for line in ["echo hello world", "count a b c", "rm -rf"] {
+        var parts = strings.Fields(line)
+        var cmd, ok = commands[parts[0]]
+        if !ok {
+            println("unknown command:", parts[0])
+            continue
+        }
+        println(cmd.Run(parts[1..]))
+    }
+}

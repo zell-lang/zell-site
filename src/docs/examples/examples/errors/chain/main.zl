@@ -1,0 +1,35 @@
+namespace chain
+
+import io
+
+func readFile(path string) string! {
+    return error("no such file: " + path)
+}
+
+func loadConfig() string! {
+    // ?("...") adds context and keeps the original error inside.
+    var text = readFile("app.toml")?("load config")
+    return text
+}
+
+func start() void! {
+    loadConfig()?("start server")
+}
+
+func main() {
+    try start() catch err {
+        println(err)
+
+        // Walk the chain from the outermost error to the cause.
+        var e = err
+        var depth = 0
+        for e != nil {
+            println(depth, e.Message())
+            e = errors.Unwrap(e)
+            depth += 1
+        }
+
+        // errors.Wrap does the same as ?("...") on a value you already hold.
+        println(errors.Wrap(err, "main"))
+    }
+}

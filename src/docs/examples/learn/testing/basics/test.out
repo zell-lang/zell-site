@@ -1,0 +1,16 @@
+=== RUN   TestSlug
+--- PASS: TestSlug (0.02s)
+=== RUN   TestParsePort
+--- PASS: TestParsePort (0.02s)
+=== RUN   TestPortRange
+--- PASS: TestPortRange (0.02s)
+=== RUN   TestSlugCases
+    === RUN   TestSlugCases/empty
+    --- PASS: TestSlugCases/empty (0.00s)
+    === RUN   TestSlugCases/punctuation
+    --- PASS: TestSlugCases/punctuation (0.00s)
+    === RUN   TestSlugCases/one_word
+    --- PASS: TestSlugCases/one_word (0.00s)
+--- PASS: TestSlugCases (0.02s)
+PASS
+ok  	4 passed, 0 failed, 0 skipped (0.07s)

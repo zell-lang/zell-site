@@ -1,0 +1,37 @@
+namespace orders
+
+import io
+
+func parseQty(s string) int! {
+    var n = strings.ToInt(s)?("quantity")
+    if n <= 0 {
+        return error("quantity must be positive")
+    }
+    return n
+}
+
+func price(sku string) int! {
+    switch sku {
+        case "tea": return 4
+        case "cake": return 7
+        default: return error("unknown item " + sku)
+    }
+}
+
+func order(sku string, qty string) {
+    // Inside a try block, ? jumps to its catch.
+    try {
+        var n = parseQty(qty)?
+        var p = price(sku)?
+        println(sku, "x", n, "=", n * p)
+    } catch err {
+        println("rejected:", err)
+    }
+}
+
+func main() {
+    order("tea", "3")
+    order("cake", "two")
+    order("pie", "1")
+    order("tea", "0")
+}

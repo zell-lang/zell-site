@@ -1,0 +1,22 @@
+namespace csvline
+
+@test func TestJoin(t *testing.T) {
+    testing.Equal(t, Join(["a", "b", "c"]), "a,b,c")
+    testing.Equal(t, Join([]), "")
+}
+
+@bench func BenchJoin(b *testing.B) {
+    var fields = ["2026-10-30", "order", "4711", "paid", "EUR", "129.90"]
+    b.ResetTimer()                  // exclude the setup above
+    for _ in 0..b.N {
+        _ = Join(fields)
+    }
+}
+
+@bench func BenchStringsJoin(b *testing.B) {
+    var fields = ["2026-10-30", "order", "4711", "paid", "EUR", "129.90"]
+    b.ResetTimer()
+    for _ in 0..b.N {
+        _ = strings.Join(fields, ",")
+    }
+}

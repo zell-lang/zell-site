@@ -1,0 +1,45 @@
+namespace report
+
+import io
+import reflect
+
+// Table prints a slice of any struct as aligned columns, one per field.
+func Table<T>(rows []T) {
+    var header = ""
+    for f in reflect.Fields<T>() {          // unrolled at compile time, once per field
+        header += strings.PadRight(f.Name, 10, " ")
+    }
+    println(strings.TrimRight(header, " "))
+    for row in rows {
+        var line = ""
+        for f in reflect.Fields<T>() {
+            switch f.Get(row) {             // a static switch: one branch per field type
+                case string s: line += strings.PadRight(s, 10, " ")
+                case int n:    line += strings.PadRight(strconv.Itoa(n), 10, " ")
+                case bool b:   line += strings.PadRight(yesNo(b), 10, " ")
+                default:       line += strings.PadRight("?", 10, " ")
+            }
+        }
+        println(strings.TrimRight(line, " "))
+    }
+}
+
+struct Service {
+    Name    string
+    Port    int
+    Healthy bool
+}
+
+func main() {
+    Table([
+        Service{Name: "api", Port: 8080, Healthy: true},
+        Service{Name: "worker", Port: 9090, Healthy: false},
+    ])
+}
+
+func yesNo(b bool) string {
+    if b {
+        return "yes"
+    }
+    return "no"
+}

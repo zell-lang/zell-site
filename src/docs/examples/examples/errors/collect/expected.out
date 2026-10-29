@@ -1,0 +1,5 @@
+form 0 is valid
+form 1 has 3 problems:
+  - name is empty
+  - email has no @
+  - age 200 is out of range

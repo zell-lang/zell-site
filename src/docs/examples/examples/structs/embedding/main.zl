@@ -1,0 +1,35 @@
+namespace shop
+
+import io
+
+struct Timestamps {
+    Created int
+    Updated int
+
+    func Touch(now int) {
+        this.Updated = now
+    }
+}
+
+// Embedded structs add their fields and methods to the outer one.
+struct Product {
+    Timestamps
+    Name  string
+    Price int
+}
+
+struct Order {
+    Timestamps
+    Items []Product
+}
+
+func main() {
+    var p = Product{Name: "lamp", Price: 40}
+    p.Created = 100
+    p.Touch(150)
+    println(p.Name, p.Created, p.Updated)
+
+    var o = Order{Items: [p]}
+    o.Touch(200)
+    println(len(o.Items), o.Updated, o.Timestamps.Updated)
+}

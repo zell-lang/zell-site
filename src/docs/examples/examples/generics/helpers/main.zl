@@ -1,0 +1,35 @@
+namespace ghelpers
+
+import io
+
+// Two type parameters, both inferred from the arguments.
+func mapTo<T, U>(xs []T, f func(T) U) []U {
+    var out []U
+    for x in xs {
+        out = append(out, f(x))
+    }
+    return out
+}
+
+// K must be Comparable to be a map key.
+func countBy<T, K: Comparable>(xs []T, key func(T) K) map[K]int {
+    var out = map[K]int{}
+    for x in xs {
+        out[key(x)] += 1
+    }
+    return out
+}
+
+func main() {
+    var words = ["go", "zell", "rust", "c", "java"]
+
+    // The lambda's parameter type comes from T = string.
+    var lengths = mapTo(words, w => len(w))
+    println(lengths)
+    println(mapTo(lengths, n => n % 2 == 0))
+
+    var byLen = countBy(words, w => len(w))
+    for k in maps.SortedKeys(byLen) {
+        println(k, "letters:", byLen[k])
+    }
+}

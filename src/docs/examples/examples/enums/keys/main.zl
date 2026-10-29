@@ -1,0 +1,25 @@
+namespace votes
+
+import io
+
+enum Color { Red, Green, Blue }
+
+func main() {
+    // Plain enums can be map keys.
+    var votes = map[Color]int{}
+    for c in [Color.Red, Color.Blue, Color.Red, Color.Green, Color.Red] {
+        votes[c] += 1
+    }
+
+    // Iterate the variants in declaration order rather than the map.
+    for c in [Color.Red, Color.Green, Color.Blue] {
+        println(c, votes[c])
+    }
+
+    // Look up a variant by name.
+    var byName = map[string]Color{"red": Color.Red, "green": Color.Green, "blue": Color.Blue}
+    var c, ok = byName["green"]
+    println(c, ok)
+    var _, found = byName["pink"]
+    println(found)
+}

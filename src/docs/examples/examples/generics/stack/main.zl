@@ -1,0 +1,37 @@
+namespace gstack
+
+import io
+
+struct Stack<T> {
+    items []T
+
+    func Push(x T) {
+        this.items = append(this.items, x)
+    }
+
+    func Pop() T! {
+        if len(this.items) == 0 {
+            return error("empty stack")
+        }
+        var top = this.items[len(this.items) - 1]
+        this.items = this.items[..len(this.items) - 1]
+        return top
+    }
+
+    func Len() int { return len(this.items) }
+}
+
+func main() {
+    var words = Stack<string>{}
+    words.Push("a")
+    words.Push("b")
+    println(words.Len(), try words.Pop() else "?")
+
+    // Every instantiation is compiled separately for its type.
+    var nums = Stack<float>{}
+    nums.Push(1.5)
+    println(try nums.Pop() else 0.0)
+    try nums.Pop() catch err {
+        println("error:", err)
+    }
+}

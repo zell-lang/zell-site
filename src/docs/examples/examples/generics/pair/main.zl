@@ -1,0 +1,33 @@
+namespace gpair
+
+import io
+import math
+
+struct Pair<A, B> {
+    First  A
+    Second B
+
+    func Swap() Pair<B, A> {
+        return Pair<B, A>{First: this.Second, Second: this.First}
+    }
+}
+
+// zip returns pairs of elements with the same index.
+func zip<A, B>(xs []A, ys []B) []Pair<A, B> {
+    var out []Pair<A, B>
+    var n = math.IMin(len(xs), len(ys))
+    for i in 0..n {
+        out = append(out, Pair<A, B>{First: xs[i], Second: ys[i]})
+    }
+    return out
+}
+
+func main() {
+    var p = Pair<string, int>{First: "age", Second: 31}
+    var q = p.Swap()
+    println(p.First, p.Second, "|", q.First, q.Second)
+
+    for z in zip(["ann", "bob", "cy"], [90, 72]) {
+        println(z.First, z.Second)
+    }
+}

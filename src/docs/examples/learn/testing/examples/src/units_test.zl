@@ -1,0 +1,22 @@
+namespace units
+
+import io
+
+func ExampleBytes() {
+    println(Bytes(512))
+    println(Bytes(1536))
+    println(Bytes(3 * 1024 * 1024))
+    // Output:
+    // 512 B
+    // 1.5 KiB
+    // 3 MiB
+}
+
+func ExampleBytes_unordered() {
+    for n in [1024, 2048] {
+        println(Bytes(n))
+    }
+    // Unordered output:
+    // 2 KiB
+    // 1 KiB
+}

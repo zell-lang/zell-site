@@ -1,0 +1,35 @@
+namespace counters
+
+import io
+
+struct Counter {
+    Name string
+    N    int
+    func Inc() { this.N += 1 }
+    func Add(k int) { this.N += k }
+}
+
+func repeat(times int, f func()) {
+    for _ in 0..times {
+        f()
+    }
+}
+
+func main() {
+    var c = Counter{Name: "clicks"}
+
+    // c.Inc is a method value: a function bound to c.
+    repeat(3, c.Inc)
+    println(c.Name, c.N)
+
+    // Counter.Add is a method expression: the receiver comes first.
+    var add = Counter.Add
+    add(&c, 10)
+    println(c.N)
+
+    var handlers = [c.Inc, () => c.Add(100)]
+    for h in handlers {
+        h()
+    }
+    println(c.N)
+}

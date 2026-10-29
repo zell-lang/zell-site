@@ -1,0 +1,137 @@
+Zell's reflection works in two modes. At **run time**, every type the program inspects has a static,
+read-only table with its name, fields, methods and attributes, much like `reflect` in Go. At **compile
+time**, a generic function can loop over the fields of its type parameter, and the compiler expands
+the loop into plain code for each field. That is how `encoding.json` serializes structs, and it is how
+you write validators, table printers and routers without code generators.
+
+**Attributes** connect the two. They are typed metadata on declarations, checked by the compiler, and
+both modes read them.
+
+## Attributes
+
+An attribute is an ordinary struct marked `@attribute`. Its fields are the attribute's parameters.
+You apply it with `@name(...)`, passing arguments by name or by position in field order; an omitted
+argument takes the field's default, or the zero value.
+
+<Example id="learn/reflection/attributes" />
+
+- `targets` limits where the attribute may appear: `Struct`, `Field`, `Func`, `Param`, `Enum`,
+  `Variant`, `Interface`, `Namespace`. Without it, anywhere.
+- `repeatable: true` allows the attribute more than once on a declaration; read all of them with
+  `Attributes<A>()`, in source order.
+- Arguments are compile-time constants: numbers, strings, `bool`, enums, slices of those, and other
+  attribute structs.
+- An attribute is data only: it runs no code and changes nothing by itself. A library gives it meaning
+  by reading it.
+- Visibility follows the struct's name: `setting` is private to its namespace, while an attribute named
+  `Setting` can be used from other packages as `@config.Setting(...)`.
+
+<Callout type="go">
+Attributes replace struct tags. Where Go has the string `json:"id,omitempty"` that nothing checks,
+Zell has `@json(name: "id", omitEmpty: true)`: a misspelled attribute name (`@jsno`) or a wrong
+argument type is a compile error.
+</Callout>
+
+### Built-in attributes
+
+The standard library declares several attributes. You have met `@test`, and `@allowCycle` and
+`@acyclic` from [Memory and resources](/docs/learn/memory). The serialization formats share a pattern:
+`@json(name:, omitEmpty:, skip:)`, and similarly `@yaml`, `@toml`, `@xml` and `@csv`, or `@serde` for all
+of them at once.
+
+<Example id="learn/reflection/json" />
+
+`json.Format` and `json.Parse<T>` are ordinary library code. They read the attributes with the
+compile-time reflection described below.
+
+## Type information at run time
+
+`reflect.TypeOf<T>()` returns the `*reflect.TypeInfo` of a type, and `typeof(x)` returns the dynamic type of
+a value (or `nil` for `nil`). There is one table per type, so `==` compares types. A `TypeInfo` has
+`Name`, `FullName`, `Package`, `Kind`, `Fields`, `Methods`, `Variants` (for enums), `Elem` and `Key`,
+and the lookups `Field(name)`, `Method(name)`, `Attribute<A>()` and `Attributes<A>()`. A `FieldInfo`
+has `Name`, `Type`, `Offset`, `Index`, `Exported` and its own `Attribute<A>()`.
+
+The tables cost nothing in a program that does not use them. Only the types the program inspects get a
+full table, and the linker drops the rest.
+
+## Compile-time reflection
+
+Inside a generic function, `for f in reflect.Fields<T>()` is not a loop over a slice. It tells the compiler
+to check and generate the body once for each field of `T`. In each copy, `f.Get(v)` is a direct field
+access (`v.Login`, `v.Password`) with the field's static type, and `f.Name`, `f.Index`, `f.Type` and
+`f.Attribute<A>()` are constants. The result runs as fast as hand-written code: no `reflect.Value`, no
+boxing, no table lookups.
+
+Because those values are constants, an `if` on them is **static**: the compiler keeps only the branch
+that applies to that field and does not even type-check the other one. Here `len(f.Get(v))` is generated
+only for fields with `@length`, so it never meets the `int` field `Age`.
+
+<Example id="learn/reflection/validate" />
+
+### `reflect.Error`: rejecting wrong uses
+
+`reflect.Error("message")` is a library-level `static_assert`. If the compiler reaches it in an
+instantiation after folding the static `if`s, compilation fails with that message, pointing at the code
+that instantiated the generic function. Put `@length(1, 3)` on `Age int` above and the program no longer
+compiles:
+
+```text
+error: @length on field Age needs a string
+  --> main.zl:19:17
+   = note: raised by Validate<Account>
+   = note: in instantiation of Validate<Account>
+   = note: instantiated here (main.zl:37:14)
+```
+
+The message must be a constant string; it may include `f.Name`, type names and string fields of
+attributes.
+
+### Static `switch` on field types
+
+A `switch` on `f.Get(v)` whose cases are all type patterns picks its branch at compile time, by the
+field's type. That is enough for a generic table printer:
+
+<Example id="learn/reflection/table" />
+
+`if reflect.TypeOf<T>().Kind == reflect.Kind.Struct { … }` is static as well, so a generic function can
+treat structs, slices and numbers differently. `f.Set(p, value)` assigns a field through a `*T`, and
+`switch f.Type.Kind { case reflect.Kind.Int: … }` chooses by kind.
+
+## Finding types by attribute
+
+`reflect.TypesWith<A>()` returns every type in the whole program that carries attribute `A`, from your
+package, its dependencies and the standard library. The order is stable: by package, then file, then
+declaration. It works from library code too, so a framework can find the application's handlers or jobs
+without a registration call.
+
+<Example id="learn/reflection/registry" />
+
+`t.Method("Run")` returns a `*MethodInfo`. `Call<F>()` turns it into an ordinary function of type `F`,
+with the receiver as its first parameter for instance methods, so the call itself is direct. A
+signature that does not match `F` panics. `m.Invoke(recv, args)` is the untyped form with `[]any`
+arguments.
+
+### Unrolling types and methods
+
+A loop over `TypesWith<A>()` is unrolled at compile time, like `Fields<T>()`, when its body needs the
+type itself. That is the case when `t` is used as a type (`var c t`), when the body calls `CallOn` or
+`Apply`, or when it calls `reflect.Error`. Inside, `for m in t.Methods` unrolls over the methods and
+`for p in m.Params` over their parameters. `m.Attribute<B>()`, `m.Name`, `p.Name` and `p.Type` are
+constants there, and `m.CallOn(&c, args...)` is a direct, type-checked call.
+
+<Example id="learn/reflection/dispatch" />
+
+This is a complete router: the compiler turns `dispatch` into a chain of string comparisons and
+direct calls, and `cache` produces no code at all.
+
+<Callout type="note">
+In the released compiler, the unrolled form does not support generic types marked with the
+attribute, or descriptors used as types inside a lambda, and `async` methods have no run-time
+`MethodInfo` (so `Call<F>()` and `Invoke` do not reach them).
+</Callout>
+
+## Next
+
+[Testing and benchmarks](/docs/learn/testing): `@test` functions, assertions, benchmarks and running tests
+in CI.

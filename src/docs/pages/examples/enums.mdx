@@ -1,0 +1,46 @@
+Enums model values that are one of a fixed set of variants; a `switch` takes them apart. These
+programs cover plain enums, variants with data and methods. [Enums and pattern
+matching](/docs/learn/enums) explains the rules.
+
+## Plain enums and switch
+
+A `switch` that lists every variant is a terminating statement, so `prefix` needs no final `return`.
+
+<Example id="examples/enums/switch" />
+
+## A state machine
+
+Methods on an enum receive a copy in `this`, so a transition returns the next state.
+
+<Example id="examples/enums/state" />
+
+## Variants with data
+
+`case Shape.Rect(w, h)` matches the variant and binds its fields. Give the enum a `String()` method to
+print it.
+
+<Example id="examples/enums/shapes" />
+
+## Outcomes as an enum
+
+An enum can describe every result of an operation, with the data each one carries.
+
+<Example id="examples/enums/result" />
+
+## Tokens from a lexer
+
+Plain and data variants mix in one enum, and one `case` can list several variants.
+
+<Example id="examples/enums/tokens" />
+
+## Enums as map keys
+
+<Example id="examples/enums/keys" />
+
+## Enums that implement an interface
+
+<Example id="examples/enums/iface" />
+
+## Next
+
+[Functions and closures](/docs/examples/closures): function values, captured variables and `defer`.

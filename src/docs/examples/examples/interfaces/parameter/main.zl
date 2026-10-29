@@ -1,0 +1,35 @@
+namespace report
+
+import io
+
+// Write takes any sink: the caller decides where the text goes.
+interface Sink {
+    func Write(line string)
+}
+
+struct Console {
+    func Write(line string) { println("> " + line) }
+}
+
+struct Memory {
+    Lines []string
+
+    func Write(line string) { this.Lines = append(this.Lines, line) }
+}
+
+func writeReport(out Sink, items []string) {
+    out.Write(fmt.Format("{0} items", len(items)))
+    for i, it in items {
+        out.Write(fmt.Format("{0}. {1}", i + 1, it))
+    }
+}
+
+func main() {
+    var items = ["tea", "milk"]
+    writeReport(Console{}, items)
+
+    // Pass a pointer so the writes land in this variable, not in a copy.
+    var mem = Memory{}
+    writeReport(&mem, items)
+    println(len(mem.Lines), mem.Lines[2])
+}

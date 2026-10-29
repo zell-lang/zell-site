@@ -1,0 +1,37 @@
+namespace urls
+
+@test func TestSlug(t *testing.T) {
+    testing.Equal(t, Slug("Hello, World!"), "hello-world")
+    testing.Equal(t, Slug("  Zell   in   Practice "), "zell-in-practice")
+}
+
+@test func TestParsePort(t *testing.T) {
+    testing.Equal(t, t.Must(ParsePort("443")), 443)         // the value, or stop the test
+    var err = t.MustFail(ParsePort("70000"))                  // the error, or stop the test
+    testing.Contains(t, err.Message(), "out of range")
+}
+
+// A void! test can use ?: a returned error fails it.
+@test func TestPortRange(t *testing.T) void! {
+    testing.Equal(t, ParsePort("1")?, 1)
+    testing.Equal(t, ParsePort("65535")?, 65535)
+}
+
+struct slugCase {
+    name  string
+    title string
+    want  string
+}
+
+@test func TestSlugCases(t *testing.T) {
+    var cases = [
+        slugCase{name: "empty", title: "", want: ""},
+        slugCase{name: "punctuation", title: "Why? Because!", want: "why-because"},
+        slugCase{name: "one word", title: "Zell", want: "zell"},
+    ]
+    for c in cases {
+        t.Run(c.name, func(t *testing.T) {
+            testing.Equal(t, Slug(c.title), c.want)
+        })
+    }
+}

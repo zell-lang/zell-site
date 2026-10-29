@@ -1,0 +1,42 @@
+An interface lists methods; any type that has them implements it, with no declaration needed. These
+programs show interfaces in everyday roles. [Interfaces](/docs/learn/interfaces) covers the rules and
+the cost of a call.
+
+## One slice, several types
+
+<Example id="examples/interfaces/shapes" />
+
+## Interfaces as parameters
+
+A function that takes an interface lets the caller choose the implementation. Pass a pointer when the
+methods must change the caller's variable rather than a copy.
+
+<Example id="examples/interfaces/parameter" />
+
+## Dispatch by name
+
+A map from strings to an interface is a small command registry.
+
+<Example id="examples/interfaces/registry" />
+
+## Optional capabilities
+
+A `case` that names another interface checks whether the value also has those methods.
+
+<Example id="examples/interfaces/capability" />
+
+## Values of any type
+
+`any` holds any value; a type switch recovers its type.
+
+<Example id="examples/interfaces/any" />
+
+## Default methods
+
+An interface method with a body is shared by every implementation; a type can still override it.
+
+<Example id="examples/interfaces/defaults" />
+
+## Next
+
+[Enums](/docs/examples/enums): closed sets of variants, with and without data.

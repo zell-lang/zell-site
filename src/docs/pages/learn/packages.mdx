@@ -1,0 +1,175 @@
+Code in Zell is organized at two levels. A **namespace** groups declarations, much like a C# namespace;
+it can span many files. A **package** is a directory with a manifest, `zell.toml`, that owns one root
+namespace and declares its dependencies. Packages are identified by their repository path, as Go
+modules are, and there is no central registry to publish to.
+
+## Namespaces and files
+
+Every file starts with exactly one `namespace` declaration. All files that declare the same namespace
+form one namespace: they see each other's declarations, private ones included, without imports. The
+directory a file lives in does not matter to the compiler; keeping `trips.geo` in `src/geo/` is a
+convention.
+
+<Example id="learn/packages/project" files={["src/main.zl", "src/route.zl", "src/geo/geo.zl"]} />
+
+`legs` and `totalKm` are declared in `route.zl` and used in `main.zl` because both files are in
+`trips`. `trips.geo` is a separate namespace, a child of `trips`, so its names need either an import or
+a path.
+
+### Exported names
+
+A name that starts with an upper-case letter is exported; a lower-case name is private to its namespace,
+as in Go. `Point`, `DistanceKm` and `Round` are usable from `trips`; `radians` and `earthRadiusKm` are
+not:
+
+```text
+error: radians is private to namespace trips.geo (only capitalised names are exported)
+```
+
+The same rule covers struct fields and methods. Standard-library functions such as `println` are the
+one exception: they are lower-case for brevity.
+
+### Imports
+
+`import` makes the members of a namespace available by short name, like `using` in C#. The full path
+always works, with or without an import.
+
+| Import | You write |
+|---|---|
+| none | `io.println("hi")`, `trips.geo.Point{}` |
+| `import io` | `println("hi")` |
+| `import trips.geo` | `Point{}`, `DistanceKm(a, b)` |
+| `import trips.geo as g` | `g.Point{}` |
+| `import trips.geo.Point` | only `Point` |
+| `import trips` (a parent) | `geo.Point{}` |
+
+A few rules to know:
+
+- An unused import is a compile error, as in Go.
+- Inside a package, a path can start at a child of an enclosing namespace: in `trips`, `geo.DistanceKm`
+  means `trips.geo.DistanceKm` (see `route.zl` above).
+- When two imports provide the same short name, using it is an error, and you resolve it with `as` or
+  the full path. Importing `math` next to `trips.geo` above would make `Round` ambiguous:
+
+```text
+error: ambiguous name Round: imported from both math and trips.geo; use an alias (`as`) or the full path
+```
+
+- The standard library's namespaces (`io`, `strings`, `net.http`, `task`, …) are top-level and
+  reserved. A package cannot use one as its root: `namespace errors` does not compile.
+
+## The manifest
+
+`zell init` creates a program; `zell init --lib` creates a library, which has no `entry`:
+
+```sh
+zell init trips          # zell.toml + src/main.zl
+zell init money --lib    # zell.toml + src/lib.zl
+```
+
+<Example id="learn/packages/project" files={["zell.toml"]} output="none" />
+
+`namespace` is the package's root namespace: every file under `src/` declares it or a namespace below
+it, such as `trips.geo`. `entry` names the file with `main` and makes the package a program.
+`zell build`, `run`, `test` and `check` without a path find the package from the current directory, so
+you run them from anywhere inside it. The manifest can also be written as `zell.json` or `zell.yaml`;
+`zell manifest convert yaml` switches formats.
+
+## Workspaces and local dependencies
+
+A repository with several packages lists them in a `[workspace]` section, and a package uses another one
+through a `path` dependency. Here the root package `shop` is the program, and `libs/money` is a library
+it depends on.
+
+<Example id="learn/packages/workspace" files={["zell.toml", "src/main.zl", "libs/money/zell.toml", "libs/money/src/money.zl"]} />
+
+The dependency's code is reached by its root namespace (`import money`), and only its exported names are
+visible: `Amount` has a private field `cents`, so `shop` can create amounts only through `Cents`. A
+package sees only the standard library, itself and its direct dependencies; importing a package you have
+not declared is an error that names the dependency to add.
+
+`zell build --workspace` builds every member, and `-p money` selects one. Each package compiles to its
+own object file, so an unchanged package is not recompiled.
+
+## Dependencies from Git
+
+A dependency is named by its repository path, and versions are git tags such as `v1.2.3`:
+
+```toml
+[dependencies]
+"github.com/acme/router" = "^1.2"                                # tags v1.2.0 up to, not including, v2
+retry = { git = "github.com/acme/retry", version = "~0.4.1" }   # a short alias for the path
+exp = { git = "https://github.com/acme/exp", tag = "v0.4.0" }   # pinned to a tag (or branch, rev)
+money = { path = "libs/money" }                                  # a local package
+
+[dev-dependencies]
+"github.com/acme/testkit" = "^1"                                 # only for zell test
+```
+
+| Constraint | Means |
+|---|---|
+| `^1.2` | `>= 1.2.0, < 2.0.0` |
+| `~1.2.3` | `>= 1.2.3, < 1.3.0` |
+| `>=1, <2` | an explicit range |
+| `=1.4.0` | exactly this version |
+
+Versions are chosen with **minimal version selection**, as in Go: each requirement asks for the lowest
+version that satisfies it, and the graph gets the highest of those minimums. A new release of a
+dependency changes nothing until you ask for it. The graph holds one major version of each module; two
+requirements on different major versions are an error that shows both.
+
+`zell build`, `run` and `test` fetch what is missing. Modules come straight from git by default, or from
+a module proxy set in `ZELL_PROXY`. `ZELL_PRIVATE=github.com/mycorp/*` sends private paths straight to
+git with your system's git credentials.
+
+<Callout type="go">
+The import path is not the namespace. A module declares its root namespace in its manifest, so
+`github.com/acme/router` is imported as `import router`, and the root must be unique in the graph.
+There is no `/v2` suffix in paths either, since one major version per
+module is allowed in a build.
+</Callout>
+
+## The lock file
+
+`zell.lock` records the exact version, source and checksum of every package in the graph, transitive
+ones included. It is generated, deterministic YAML with sorted keys. Commit it. This is the lock of the
+workspace above:
+
+<Example id="learn/packages/workspace" files={["zell.lock"]} output="none" />
+
+Downloaded code is checked against the lock before it is used: a mismatch is a security error, not a
+silent rebuild. `--locked` makes a build fail if the lock would change (use it in CI), and `--offline`
+builds only from the lock and the local store.
+
+## Commands
+
+| Command | What it does |
+|---|---|
+| `zell install [--offline] [--locked]` | fetch modules into the store, link them into `.zell/deps/`, write `zell.lock` |
+| `zell update [module ...]` | move to the newest versions the constraints allow (all, or the named ones) |
+| `zell tree` | print the dependency graph |
+| `zell why <module>` | print every chain of requirements leading to a package |
+| `zell vendor` | copy all modules into `vendor/`; builds then use it without network |
+| `zell store verify` / `prune` / `path` | check, clean up or locate the module store |
+
+For the workspace above:
+
+```sh
+$ zell tree
+shop v0.1.0 (path:.)
+└── money v0.2.0 (path:libs/money)
+money v0.2.0 (path:libs/money)
+
+$ zell why money
+money v0.2.0 (path:libs/money)
+shop v0.1.0 (path:.) -> money v0.2.0 (path:libs/money) (money: path = libs/money)
+```
+
+The store, `~/.zell/store`, keeps every file of every module once, and projects get hard links into
+`.zell/deps/`, so a second project with the same dependency installs instantly and takes no extra space.
+Package manifests cannot run scripts: installing a dependency never executes its code.
+
+## Next
+
+[Attributes and reflection](/docs/learn/reflection): typed attributes on declarations, and code generated
+from struct fields at compile time.

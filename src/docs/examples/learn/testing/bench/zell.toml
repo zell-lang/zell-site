@@ -1,0 +1,5 @@
+[package]
+name = "csvline"
+version = "0.1.0"
+namespace = "csvline"
+entry = "src/main.zl"

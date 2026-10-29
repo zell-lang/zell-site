@@ -1,0 +1,41 @@
+namespace config
+
+import io
+
+// An error type with fields: the caller can read the line number.
+struct SyntaxError {
+    Line int
+    Text string
+
+    func Message() string {
+        return fmt.Format("line {0}: expected key=value, got \"{1}\"", this.Line, this.Text)
+    }
+}
+
+func parse(src string) map[string]string! {
+    var out = map[string]string{}
+    for i, line in strings.Split(src, "\n") {
+        if line == "" || strings.HasPrefix(line, "#") {
+            continue
+        }
+        var kv = strings.SplitN(line, "=", 2)
+        if len(kv) != 2 {
+            return SyntaxError{Line: i + 1, Text: line}
+        }
+        out[strings.Trim(kv[0])] = strings.Trim(kv[1])
+    }
+    return out
+}
+
+func main() {
+    var cfg = try parse("# demo\nhost = localhost\nport = 8080") else map[string]string{}
+    println(cfg["host"], cfg["port"])
+
+    try parse("host = x\nport 8080") catch err {
+        println(err)
+        switch err {
+            case SyntaxError e: println("fix line", e.Line)
+            default: println("other error")
+        }
+    }
+}

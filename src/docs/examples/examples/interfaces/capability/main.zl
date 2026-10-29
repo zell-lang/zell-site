@@ -1,0 +1,35 @@
+namespace files
+
+import io
+
+interface Source {
+    func Read() string
+}
+
+interface Closable {
+    func Close()
+}
+
+struct File {
+    Name string
+    func Read() string { return "data of " + this.Name }
+    func Close() { println("closed", this.Name) }
+}
+
+struct Constant {
+    func Read() string { return "constant" }
+}
+
+// A case with an interface type checks whether the value also has those methods.
+func consume(r Source) {
+    println(r.Read())
+    switch r {
+        case Closable c: c.Close()
+        default: println("nothing to close")
+    }
+}
+
+func main() {
+    consume(File{Name: "a.txt"})
+    consume(Constant{})
+}

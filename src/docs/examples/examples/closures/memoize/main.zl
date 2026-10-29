@@ -1,0 +1,30 @@
+namespace memo
+
+import io
+
+// memoize wraps f with a cache that lives inside the returned closure.
+func memoize(f func(int) int) func(int) int {
+    var cache = map[int]int{}
+    return (n int) => {
+        var v, ok = cache[n]
+        if ok {
+            return v
+        }
+        v = f(n)
+        cache[n] = v
+        return v
+    }
+}
+
+func main() {
+    var calls = 0
+    var slowSquare = func(n int) int {
+        calls += 1
+        return n * n
+    }
+    var square = memoize(slowSquare)
+    for n in [4, 5, 4, 4, 5] {
+        println(square(n))
+    }
+    println("calls:", calls)
+}

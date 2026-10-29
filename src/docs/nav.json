@@ -93,19 +93,19 @@
         {
           "slug": "packages",
           "title": "Namespaces and packages",
-          "status": "planned",
+          "status": "draft",
           "summary": "Namespaces, imports, zell.toml, dependencies from Git and the lock file."
         },
         {
           "slug": "reflection",
           "title": "Attributes and reflection",
-          "status": "planned",
+          "status": "draft",
           "summary": "Attributes, compile-time reflection with Fields and TypesWith, and generating code from types."
         },
         {
           "slug": "testing",
           "title": "Testing and benchmarks",
-          "status": "planned",
+          "status": "draft",
           "summary": "@test functions, assertions, t.Must, benchmarks and running tests in CI."
         }
       ]
@@ -136,37 +136,37 @@
         {
           "slug": "structs",
           "title": "Structs and methods",
-          "status": "planned",
+          "status": "draft",
           "summary": "Literals, methods, pointers, embedding and printing structs."
         },
         {
           "slug": "interfaces",
           "title": "Interfaces",
-          "status": "planned",
+          "status": "draft",
           "summary": "Implementing an interface, type switches, interfaces as parameters."
         },
         {
           "slug": "enums",
           "title": "Enums",
-          "status": "planned",
+          "status": "draft",
           "summary": "Variants with data, exhaustive switch, methods on enums."
         },
         {
           "slug": "closures",
           "title": "Functions and closures",
-          "status": "planned",
+          "status": "draft",
           "summary": "Function values, closures that capture, variadic functions, defer."
         },
         {
           "slug": "generics",
           "title": "Generics",
-          "status": "planned",
+          "status": "draft",
           "summary": "Generic functions and types, constraints, Map and Filter helpers."
         },
         {
           "slug": "errors",
           "title": "Errors",
-          "status": "planned",
+          "status": "draft",
           "summary": "Returning, propagating, wrapping and inspecting errors."
         },
         {

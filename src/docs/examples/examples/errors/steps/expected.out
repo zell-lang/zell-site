@@ -1,0 +1,4 @@
+tea x 3 = 12
+rejected: quantity: invalid integer: "two"
+rejected: unknown item pie
+rejected: quantity must be positive

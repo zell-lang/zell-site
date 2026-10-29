@@ -1,0 +1,32 @@
+namespace pipeline
+
+import io
+
+// compose returns a function that applies f, then g.
+func compose(f func(string) string, g func(string) string) func(string) string {
+    return (s string) => g(f(s))
+}
+
+// pipe chains any number of steps, left to right.
+func pipe(steps ...func(string) string) func(string) string {
+    return (s string) => {
+        var out = s
+        for step in steps {
+            out = step(out)
+        }
+        return out
+    }
+}
+
+func main() {
+    // Library functions are wrapped in lambdas to pass them as values.
+    var shout = compose((s string) => strings.ToUpper(s), (s string) => s + "!")
+    println(shout("hello"))
+
+    var slug = pipe(
+        (s string) => strings.Trim(s),
+        (s string) => strings.ToLower(s),
+        (s string) => strings.Replace(s, " ", "-"),
+    )
+    println(slug("  Zell By Example  "))
+}

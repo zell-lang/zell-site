@@ -1,0 +1,33 @@
+namespace tool
+
+import io
+import reflect
+
+@attribute(targets: [reflect.Target.Struct])
+struct command {
+    name string
+    help string
+}
+
+@command(name: "greet", help: "print a greeting")
+struct Greet {
+    static func Run() string {
+        return "hello"
+    }
+}
+
+@command(name: "version", help: "print the version")
+struct Version {
+    static func Run() string {
+        return "tool 0.1.0"
+    }
+}
+
+func main() {
+    // Every type in the program marked @command, in declaration order.
+    for t in reflect.TypesWith<command>() {
+        var c = t.Attribute<command>()
+        var run = t.Method("Run").Call<func() string>()    // a typed function, called directly
+        println(c.name, "-", c.help, "->", run())
+    }
+}

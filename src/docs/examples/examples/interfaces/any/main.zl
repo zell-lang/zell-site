@@ -1,0 +1,28 @@
+namespace dynamic
+
+import io
+
+struct Point {
+    X int
+    Y int
+}
+
+// any holds a value of any type; a type switch takes it apart.
+func describe(v any) string {
+    switch v {
+        case int n: return fmt.Format("int {0}", n)
+        case float f: return fmt.Format("float {0}", f)
+        case string s: return fmt.Format("string of {0} bytes", len(s))
+        case Point p: return fmt.Format("point at {0},{1}", p.X, p.Y)
+        case []int xs: return fmt.Format("{0} ints", len(xs))
+        case nil: return "nil"
+        default: return "something else"
+    }
+}
+
+func main() {
+    var values []any = [42, 2.5, "héllo", Point{X: 1, Y: 2}, [1, 2, 3], true]
+    for v in values {
+        println(describe(v))
+    }
+}

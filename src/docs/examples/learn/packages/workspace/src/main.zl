@@ -1,0 +1,10 @@
+namespace shop
+
+import io
+import money
+
+func main() {
+    var cart = [Cents(1999), Cents(450), Cents(5)]
+    println("items:", len(cart))
+    println("total:", Sum(cart))
+}

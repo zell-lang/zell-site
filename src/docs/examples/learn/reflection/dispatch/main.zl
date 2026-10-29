@@ -1,0 +1,48 @@
+namespace web
+
+import io
+import reflect
+
+@attribute(targets: [reflect.Target.Struct])
+struct controller {
+    prefix string
+}
+
+@attribute(targets: [reflect.Target.Func])
+struct get {
+    path string
+}
+
+@controller("/users")
+struct Users {
+    @get("/count") func Count() string { return "2 users" }
+    @get("/first") func First() string { return "ann" }
+    func cache() string { return "not a route" }
+}
+
+@controller("/health")
+struct Health {
+    @get("") func Check() string { return "ok" }
+}
+
+func dispatch(path string) string {
+    for t in reflect.TypesWith<controller>() {      // one copy of the body per controller
+        var c t                                     // t used as a type
+        for m in t.Methods {                        // one copy per method
+            var g = m.Attribute<get>()
+            if g == nil {
+                continue                            // static: no code for cache()
+            }
+            if t.Attribute<controller>().prefix + g.path == path {
+                return m.CallOn(&c)                 // a direct, typed call
+            }
+        }
+    }
+    return "404 " + path
+}
+
+func main() {
+    println(dispatch("/users/count"))
+    println(dispatch("/health"))
+    println(dispatch("/admin"))
+}

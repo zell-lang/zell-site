@@ -1,0 +1,40 @@
+namespace settings
+
+import io
+import reflect
+
+// An attribute is a struct marked @attribute; its fields are the arguments.
+@attribute(targets: [reflect.Target.Field])
+struct setting {
+    key  string
+    help string = "no description"      // a default for an omitted argument
+}
+
+@attribute(targets: [reflect.Target.Struct], repeatable: true)
+struct tag {
+    name string
+}
+
+@tag("config")
+@tag("public")
+struct Server {
+    @setting(key: "SERVER_PORT", help: "port to listen on") Port int
+    @setting("SERVER_HOST")                                 Host string
+    started bool
+}
+
+func main() {
+    var t = reflect.TypeOf<Server>()
+    println(t.FullName, t.Kind)
+    for tg in t.Attributes<tag>() {
+        println("tag:", tg.name)
+    }
+    for f in t.Fields {
+        var s = f.Attribute<setting>()      // *setting, or nil
+        if s == nil {
+            println(f.Name, "has no setting, exported:", f.Exported)
+            continue
+        }
+        println(f.Name, f.Type.Name, s.key, "-", s.help)
+    }
+}

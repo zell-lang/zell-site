@@ -1,0 +1,39 @@
+namespace retry
+
+import io
+
+// Constant errors work as sentinels, compared with errors.Is.
+const ErrBusy = error("server busy")
+const ErrDenied = error("access denied")
+
+var attempts = 0
+
+func fetch() string! {
+    attempts += 1
+    if attempts < 3 {
+        return ErrBusy
+    }
+    return "payload"
+}
+
+func withRetry(max int, f func() string!) string! {
+    for i in 1..max + 1 {
+        var v = try f() catch err {
+            if errors.Is(err, ErrBusy) && i < max {
+                println("attempt", i, "failed:", err)
+                continue
+            }
+            return err
+        }
+        return v
+    }
+    return ErrDenied
+}
+
+func main() {
+    println(try withRetry(5, fetch) else "gave up")
+    attempts = 0
+    try withRetry(2, fetch) catch err {
+        println("gave up:", err)
+    }
+}

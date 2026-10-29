@@ -1,0 +1,39 @@
+namespace forms
+
+import io
+
+struct Form {
+    Name  string
+    Email string
+    Age   int
+}
+
+// Check every field and report all problems at once.
+func validate(f Form) []error {
+    var problems []error
+    if strings.Trim(f.Name) == "" {
+        problems = append(problems, error("name is empty"))
+    }
+    if !strings.Contains(f.Email, "@") {
+        problems = append(problems, error("email has no @"))
+    }
+    if f.Age < 0 || f.Age > 150 {
+        problems = append(problems, error(fmt.Format("age {0} is out of range", f.Age)))
+    }
+    return problems
+}
+
+func main() {
+    var forms = [Form{Name: "Ann", Email: "ann@example.com", Age: 30}, Form{Name: " ", Email: "bob", Age: 200}]
+    for i, f in forms {
+        var problems = validate(f)
+        if len(problems) == 0 {
+            println("form", i, "is valid")
+            continue
+        }
+        println("form", i, "has", len(problems), "problems:")
+        for p in problems {
+            println("  -", p)
+        }
+    }
+}

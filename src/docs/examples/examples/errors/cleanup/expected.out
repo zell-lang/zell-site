@@ -1,0 +1,6 @@
+query on main
+closed main
+query on flaky
+warning: close flaky: connection reset
+closed broken
+error: query on broken failed

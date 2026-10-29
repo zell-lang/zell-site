@@ -1,0 +1,13 @@
+namespace cache
+
+// An async test: the runner awaits it.
+@test async func TestLoad(t *testing.T) {
+    testing.Equal(t, t.Must(await Load("user:1")), "value of user:1")
+    testing.Contains(t, t.MustFail(await Load("")).Message(), "empty")
+}
+
+@test async func TestLoadMany(t *testing.T) {
+    t.Parallel()                    // runs alongside the other parallel tests
+    var (a, b) = t.Must(await task.All(Load("x"), Load("y")))
+    testing.Equal(t, a + ", " + b, "value of x, value of y")
+}

@@ -1,0 +1,52 @@
+Functions are values: you store them in variables, maps and slices, pass them as arguments and return
+them. A closure keeps the variables it uses alive. [Basics](/docs/learn/basics#function-values-and-closures)
+covers the syntax.
+
+## Function values
+
+A function type is written `func(int, int) int`. Named functions, short lambdas and block lambdas all
+fit it.
+
+<Example id="examples/closures/values" />
+
+## Capturing variables
+
+A closure refers to the variable itself, so changes are seen on both sides.
+
+<Example id="examples/closures/capture" />
+
+## A closure with state
+
+The cache lives inside the returned function and survives between calls.
+
+<Example id="examples/closures/memoize" />
+
+## Composing functions
+
+<Example id="examples/closures/pipeline" />
+
+<Callout type="note">
+Standard-library functions such as `strings.ToUpper` cannot be used as values in 0.1.5; wrap them in a
+lambda, as above.
+</Callout>
+
+## Variadic functions
+
+<Example id="examples/closures/variadic" />
+
+## Methods as values
+
+`c.Inc` is a function bound to `c`; `Counter.Add` takes the receiver as its first argument.
+
+<Example id="examples/closures/methods" />
+
+## Defer
+
+A deferred call runs when the function returns, on every path, last in, first out. Its arguments are
+evaluated at the `defer` statement.
+
+<Example id="examples/closures/defer" />
+
+## Next
+
+[Generics](/docs/examples/generics): functions and types with type parameters.

@@ -1,0 +1,37 @@
+namespace goption
+
+import io
+
+enum Option<T> {
+    Some(value T)
+    None
+
+    func Or(fallback T) T {
+        switch this {
+            case Option.Some(v): return v
+            case Option.None: return fallback
+        }
+    }
+}
+
+// find returns the first element that matches, if any.
+func find<T>(xs []T, match func(T) bool) Option<T> {
+    for x in xs {
+        if match(x) {
+            return Option<T>.Some(x)
+        }
+    }
+    return Option<T>.None
+}
+
+func main() {
+    var names = ["ann", "bob", "carol"]
+    var long = find(names, n => len(n) > 4)
+    // In a pattern the type arguments are not written.
+    switch long {
+        case Option.Some(n): println("found", n)
+        case Option.None: println("none")
+    }
+
+    println(find([3, 8, 12], n => n > 10).Or(0), find([3, 8], n => n > 10).Or(-1))
+}

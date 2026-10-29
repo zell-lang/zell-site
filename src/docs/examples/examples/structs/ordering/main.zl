@@ -1,0 +1,39 @@
+namespace versions
+
+import io
+
+struct Version {
+    Major int
+    Minor int
+    Patch int
+
+    // Compare enables < <= > >= and makes Version Ordered.
+    func Compare(other Version) int {
+        if this.Major != other.Major {
+            return this.Major - other.Major
+        }
+        if this.Minor != other.Minor {
+            return this.Minor - other.Minor
+        }
+        return this.Patch - other.Patch
+    }
+
+    // Equals enables == and !=.
+    func Equals(other Version) bool {
+        return this.Compare(other) == 0
+    }
+
+    func String() string {
+        return fmt.Format("v{0}.{1}.{2}", this.Major, this.Minor, this.Patch)
+    }
+}
+
+func main() {
+    var a = Version{Major: 1, Minor: 2, Patch: 0}
+    var b = Version{Major: 1, Minor: 10, Patch: 3}
+    println(a < b, a == Version{Major: 1, Minor: 2, Patch: 0})
+
+    var all = [b, Version{Major: 0, Minor: 9, Patch: 1}, a]
+    slices.Sort(all)
+    println(all, slices.Max(all))
+}

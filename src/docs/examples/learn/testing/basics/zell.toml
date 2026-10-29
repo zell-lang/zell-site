@@ -1,0 +1,5 @@
+[package]
+name = "urls"
+version = "0.1.0"
+namespace = "urls"
+entry = "src/main.zl"

@@ -141,8 +141,10 @@
 .std-search input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
 .std-search { margin-bottom: 8px; }
 .std-hits ul, .std-list { list-style: none; padding: 0 !important; margin: 0; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
-.std-hits li, .std-list li { display: grid; grid-template-columns: minmax(180px, 34%) 1fr; gap: 6px 20px; padding: 10px 16px; background: var(--bg); align-items: baseline; }
-.std-list li { grid-template-columns: minmax(160px, 28%) 40px 1fr; }
+.std-hits li, .std-list li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; padding: 10px 16px; background: var(--bg); }
+.std-hits li > a, .std-list li > a { flex: 0 0 15rem; min-width: 0; }
+.std-sum { flex: 1 1 20rem; min-width: 0; }
+.std-count { order: 3; margin-left: auto; }
 .std-hits li + li, .std-list li + li { border-top: 1px solid var(--line); }
 .std-hits a { display: flex; gap: 10px; align-items: baseline; }
 .std-hits code, .std-list code { font-size: .9rem; border: 0 !important; background: none !important; padding: 0 !important; }
@@ -187,3 +189,18 @@
 .doc-strip ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
 .doc-strip li a { display: block; font-family: var(--mono); font-size: .84rem; padding: 6px 12px; border: 1px solid var(--line); border-radius: 3px; color: var(--fg); }
 .doc-strip li a:hover { border-color: var(--accent); text-decoration: none; }
+
+/* sidebar: the standard library tree */
+.nav-row { display: flex; align-items: center; }
+.nav-row > a { flex: 1; min-width: 0; }
+.nav-toggle, .nav-group { display: flex; align-items: center; gap: 6px; background: none; border: 0; color: var(--fg-muted); cursor: pointer; font: inherit; border-radius: 3px; }
+.nav-toggle { padding: 6px; }
+.nav-toggle:hover, .nav-group:hover { color: var(--fg); background: var(--bg-alt); }
+.nav-toggle svg, .nav-group svg { flex: none; width: 13px; height: 13px; transition: transform .15s; }
+.nav-toggle[aria-expanded="true"] svg, .nav-group[aria-expanded="true"] svg { transform: rotate(90deg); }
+.docs-nav .nav-tree { margin: 0 0 4px 26px; border-left: 1px solid var(--line); }
+.docs-nav .nav-tree a { padding: 3px 10px 3px 14px; font-size: .86rem; }
+.docs-nav .nav-tree .nav-tree { margin-left: 18px; }
+.nav-group { width: 100%; padding: 3px 10px 3px 8px; font-size: .86rem; text-align: left; }
+.nav-count { margin-left: auto; font-family: var(--font); font-size: .74rem; color: var(--fg-muted); }
+.docs-nav .mono { font-family: var(--mono); }

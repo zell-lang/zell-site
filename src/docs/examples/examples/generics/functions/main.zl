@@ -1,0 +1,28 @@
+namespace gfuncs
+
+import io
+
+// T: Ordered allows < and >; the type is inferred from the arguments.
+func clamp<T: Ordered>(x T, lo T, hi T) T {
+    if x < lo { return lo }
+    if x > hi { return hi }
+    return x
+}
+
+// T: Comparable allows ==.
+func indexOf<T: Comparable>(xs []T, want T) int {
+    for i, x in xs {
+        if x == want {
+            return i
+        }
+    }
+    return -1
+}
+
+func main() {
+    println(clamp(15, 0, 10), clamp(-2.5, 0.0, 1.0), clamp("m", "a", "k"))
+    println(indexOf(["a", "b", "c"], "c"), indexOf([3, 1, 4], 9))
+
+    // Explicit type arguments: 1 and 2 become floats.
+    println(clamp<float>(1, 0, 2) / 2.0)
+}

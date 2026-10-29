@@ -1,0 +1,43 @@
+A function that can fail returns `T!`; the caller passes the error up with `?` or handles it with
+`try`. These programs show common error-handling tasks. [Errors](/docs/learn/errors) explains each
+construct.
+
+## Validating input
+
+A `void!` function returns nothing on success, so reaching the end of the body means "no error".
+
+<Example id="examples/errors/validate" />
+
+## Sentinel errors and retries
+
+<Example id="examples/errors/retry" />
+
+## Errors with fields
+
+Any struct with `Message() string` is an error. A type switch on the error reads its fields.
+
+<Example id="examples/errors/parse" />
+
+## Context and the error chain
+
+<Example id="examples/errors/chain" />
+
+## Several steps, one handler
+
+<Example id="examples/errors/steps" />
+
+## Collecting all problems
+
+To report every problem instead of the first one, gather errors in a slice.
+
+<Example id="examples/errors/collect" />
+
+## Errors during cleanup
+
+`defer` cannot discard a `T!` result. Handle the error in a deferred closure.
+
+<Example id="examples/errors/cleanup" />
+
+## Next
+
+[Files and directories](/docs/examples/files): reading, writing and walking directories.

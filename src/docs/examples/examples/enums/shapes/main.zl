@@ -1,0 +1,35 @@
+namespace geometry
+
+import io
+import math
+
+enum Shape {
+    Circle(r float)
+    Rect(w float, h float)
+    Point
+
+    func Area() float {
+        switch this {
+            case Shape.Circle(r): return math.Pi * r * r
+            case Shape.Rect(w, h): return w * h
+            case Shape.Point: return 0.0
+        }
+    }
+
+    // Without String(), an enum with data cannot be printed.
+    func String() string {
+        switch this {
+            case Shape.Circle(r): return fmt.Format("circle(r={0})", r)
+            case Shape.Rect(w, h): return fmt.Format("rect({0}x{1})", w, h)
+            case Shape.Point: return "point"
+        }
+    }
+}
+
+func main() {
+    var shapes = [Shape.Circle(2.0), Shape.Rect(3.0, 1.5), Shape.Point]
+    for s in shapes {
+        println(s, fmt.Sprintf("%.2f", s.Area()))
+    }
+    println(shapes)
+}

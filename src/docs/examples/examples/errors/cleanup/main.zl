@@ -1,0 +1,36 @@
+namespace cleanup
+
+import io
+
+struct Conn {
+    Name string
+
+    func Close() void! {
+        if this.Name == "flaky" {
+            return error("close " + this.Name + ": connection reset")
+        }
+        println("closed", this.Name)
+    }
+}
+
+func use(name string) void! {
+    var c = Conn{Name: name}
+    // A deferred call cannot drop an error: handle it in a closure.
+    defer func() {
+        try c.Close() catch err {
+            println("warning:", err)
+        }
+    }()
+    if name == "broken" {
+        return error("query on " + name + " failed")
+    }
+    println("query on", name)
+}
+
+func main() {
+    for name in ["main", "flaky", "broken"] {
+        try use(name) catch err {
+            println("error:", err)
+        }
+    }
+}

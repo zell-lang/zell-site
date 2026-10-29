@@ -1,0 +1,28 @@
+namespace logging
+
+import io
+
+// The last parameter collects the remaining arguments into a slice.
+func log(level string, parts ...string) {
+    println("[" + level + "]", strings.Join(parts, " "))
+}
+
+func minOf(first int, rest ...int) int {
+    var m = first
+    for x in rest {
+        if x < m {
+            m = x
+        }
+    }
+    return m
+}
+
+func main() {
+    log("info", "server", "started")
+    log("warn")
+
+    var words = ["disk", "almost", "full"]
+    log("error", words...)
+
+    println(minOf(7), minOf(7, 3, 9), minOf(4, [8, 1, 6]...))
+}

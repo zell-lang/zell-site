@@ -1,0 +1,158 @@
+Tests in Zell are ordinary functions marked `@test`. They live next to the code they test, in the same
+namespace, usually in files ending in `_test.zl`. `zell test` finds them, builds one test binary and
+runs **each test in its own process**, so a failed assertion, a `Fatal` or even a panic ends only that
+test. The same files hold benchmarks and documentation examples.
+
+## Writing tests
+
+A test is a function marked `@test` that takes a `*testing.T`, or no parameters at all. Assertions
+come from the `testing` namespace. They report a failure and let the test continue, so one run shows
+every broken check.
+
+<Example id="learn/testing/basics" files={["src/main.zl", "src/urls_test.zl"]} />
+
+```sh
+zell test -v
+```
+
+<Example id="learn/testing/basics" files={["src/urls_test.zl"]} output="test" />
+
+Test files belong to the package's namespace, so tests can call private functions. They are compiled
+only by `zell test`, never into the program.
+
+### Fallible code: `t.Must`, `t.MustFail` and `void!` tests
+
+Errors are values in Zell, and tests should not need `try … catch` around every call:
+
+- `t.Must(f())` returns the value of a `T!` call. If the call fails, the test stops and logs the
+  location, the message and the error's trace.
+- `t.MustFail(f())` returns the error of a call that must fail. If the call succeeds, the test stops
+  with `expected an error`.
+- A test declared `void!` can use `?`; an error it returns fails the test.
+
+`t.Must` and `t.MustFail` are the only calls that accept an unhandled `T!` argument. Here is what a
+failure looks like when `TestParsePort` passes `"https"` to `t.Must` and `TestSlug` expects the wrong
+slug (paths as printed on Windows):
+
+```text
+    got "zell-in-practice", want "zell-practice"
+--- FAIL: TestSlug (0.02s)
+    .\src\urls_test.zl:9: port: invalid integer: "https"
+      created at   .\src\main.zl:19      ParsePort
+      returned via .\src\main.zl:19      ParsePort      ?("port")
+      returned via .\src\urls_test.zl:9  TestParsePort
+--- FAIL: TestParsePort (0.02s)
+FAIL
+FAIL	2 passed, 2 failed, 0 skipped (0.07s)
+```
+
+Without `-v`, passing tests stay quiet and only failures print their log. The exit status is 1 when
+anything failed, so `zell test` works in CI as it is.
+
+### Assertions
+
+| Function | Checks |
+|---|---|
+| `testing.Equal(t, got, want)` | `got == want`; reports `got X, want Y` |
+| `testing.EqualMsg(t, got, want, msg)` | the same, with context in the report |
+| `testing.NotEqual(t, got, other)` | `got != other` |
+| `testing.EqualSlices(t, got, want)` | element by element |
+| `testing.True(t, cond, msg)`, `False` | a condition; the message is required |
+| `testing.Nil(t, p)`, `NotNil` | a pointer |
+| `testing.Error(t, err)`, `NoError`, `ErrorIs(t, err, target)` | errors |
+| `testing.Contains(t, s, sub)` | a substring |
+| `testing.Panics(t, fn)`, `PanicsWith(t, fn, want)` | that `fn` panics (with message `want`) |
+
+`testing.EqualFatal` stops the test on a mismatch. On the `*testing.T` itself, `t.Log(msg)` writes to the
+test's log, `t.Error(msg)` fails the test and continues, `t.Fatal(msg)` fails and stops it, and
+`t.Skip(msg)` skips the rest.
+
+### Table tests and subtests
+
+Tables are slices of structs. `t.Run(name, fn)` runs a named subtest, shown as `TestSlugCases/empty`;
+spaces in the name become underscores. Subtests run inside their parent's process, so a `Fatal` in one
+of them ends the whole top-level test.
+
+<Callout type="go">
+This is Go's `testing` package with two differences: every top-level test runs in its own process, so
+a panic in one test cannot take down the rest, and `t.Must` replaces the `if err != nil { t.Fatal(err) }`
+after every call.
+</Callout>
+
+## Async and parallel tests
+
+A test can be `async`; the runner awaits it, so it can `await` directly. A test whose body calls
+`t.Parallel()` runs alongside the other parallel tests, after the sequential ones, at most
+`--parallel N` processes at a time (4 by default). Results are still printed in a fixed order.
+
+<Example id="learn/testing/async" files={["src/cache_test.zl"]} output="test" />
+
+## Benchmarks
+
+A benchmark is a function marked `@bench` that takes a `*testing.B` and runs the measured code `b.N`
+times. The runner raises `N` until the run takes about a second. `b.ResetTimer()` excludes the setup
+before it, and `b.StopTimer()` / `b.StartTimer()` exclude a part of the loop.
+
+<Example id="learn/testing/bench" files={["src/csv_test.zl"]} output="none" />
+
+Benchmarks run only with `--bench`, after the tests:
+
+```sh
+$ zell test --bench
+BenchJoin                   5581394          220 ns/op        2 allocs/op
+BenchStringsJoin           30769230        34.99 ns/op        1 allocs/op
+PASS
+ok  	1 passed, 0 failed, 0 skipped (2.63s)
+```
+
+The columns are the number of iterations, the time per operation and the heap allocations per
+operation. Build with the same flags you ship with when you compare numbers: `zell test --bench
+--release`.
+
+## Documentation examples
+
+A function named `ExampleName()` in a test file is a documentation example. `zell doc` shows it under
+the symbol it names. If it ends with an `// Output:` comment, `zell test` runs it and compares its
+standard output with the comment; `// Unordered output:` accepts the lines in any order.
+
+<Example id="learn/testing/examples" files={["src/units_test.zl"]} output="none" />
+
+| Function | Documents |
+|---|---|
+| `Example()` | the namespace |
+| `ExampleBytes()` | the function or type `Bytes` |
+| `ExampleBuilder_Write()` | the method `Builder.Write` |
+| `ExampleBytes_unordered()` | `Bytes` again; the lower-case suffix names the variant |
+
+`zell test -v` reports them as `ExampleBytes` and `ExampleBytes_unordered` next to the tests, and
+`zell doc units.Bytes` prints the function's documentation with both examples. The standard library
+documents itself the same way: `zell test std` runs its examples.
+
+## Running tests
+
+```sh
+zell test                          # the package of the current directory
+zell test path/to/pkg -v           # every test with its name and log
+zell test --filter 'Slug'          # tests whose name contains Slug
+zell test --filter '^TestPort|Cases$'
+zell test --parallel 8             # up to 8 parallel tests at a time
+zell test --json                   # one JSON event per line
+zell test --bench                  # also run the benchmarks
+```
+
+`--filter` takes alternatives separated by `|`. Each one matches a substring of the test name, `^`
+anchors it at the start and `$` at the end. It is not a full regular expression. `--json` prints events
+in the shape of `go test -json`, which CI systems and editors read:
+
+```text
+{"Action":"run","Test":"TestSlug"}
+{"Action":"pass","Test":"TestSlug","Elapsed":0.015}
+```
+
+In a package, `zell test` resolves dependencies like `zell build`, including `[dev-dependencies]`, and
+compiles only the package's own test files. It accepts the build options too, such as `--release`.
+
+## Next
+
+This is the end of the Learn section. [Zell by example](/docs/examples/strings) continues with short,
+complete programs, one idea each.

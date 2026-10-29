@@ -27,6 +27,142 @@
     "zell": "0.1.5",
     "hash": "3da12ee2"
   },
+  "examples/closures/capture": {
+    "zell": "0.1.5",
+    "hash": "72eefbe5"
+  },
+  "examples/closures/defer": {
+    "zell": "0.1.5",
+    "hash": "8c00ea4a"
+  },
+  "examples/closures/memoize": {
+    "zell": "0.1.5",
+    "hash": "3a568e0d"
+  },
+  "examples/closures/methods": {
+    "zell": "0.1.5",
+    "hash": "4c0f9c37"
+  },
+  "examples/closures/pipeline": {
+    "zell": "0.1.5",
+    "hash": "3282fb22"
+  },
+  "examples/closures/values": {
+    "zell": "0.1.5",
+    "hash": "6726b8cf"
+  },
+  "examples/closures/variadic": {
+    "zell": "0.1.5",
+    "hash": "a4494305"
+  },
+  "examples/enums/iface": {
+    "zell": "0.1.5",
+    "hash": "18fa1629"
+  },
+  "examples/enums/keys": {
+    "zell": "0.1.5",
+    "hash": "e53d0d70"
+  },
+  "examples/enums/result": {
+    "zell": "0.1.5",
+    "hash": "83e8d742"
+  },
+  "examples/enums/shapes": {
+    "zell": "0.1.5",
+    "hash": "d496ea04"
+  },
+  "examples/enums/state": {
+    "zell": "0.1.5",
+    "hash": "1af5e723"
+  },
+  "examples/enums/switch": {
+    "zell": "0.1.5",
+    "hash": "8940148f"
+  },
+  "examples/enums/tokens": {
+    "zell": "0.1.5",
+    "hash": "970fdad8"
+  },
+  "examples/errors/chain": {
+    "zell": "0.1.5",
+    "hash": "c8f2209c"
+  },
+  "examples/errors/cleanup": {
+    "zell": "0.1.5",
+    "hash": "4c23f8d1"
+  },
+  "examples/errors/collect": {
+    "zell": "0.1.5",
+    "hash": "39788079"
+  },
+  "examples/errors/parse": {
+    "zell": "0.1.5",
+    "hash": "2e2ba799"
+  },
+  "examples/errors/retry": {
+    "zell": "0.1.5",
+    "hash": "104079cc"
+  },
+  "examples/errors/steps": {
+    "zell": "0.1.5",
+    "hash": "d7c3108a"
+  },
+  "examples/errors/validate": {
+    "zell": "0.1.5",
+    "hash": "d2bd286b"
+  },
+  "examples/generics/collections": {
+    "zell": "0.1.5",
+    "hash": "22e416b0"
+  },
+  "examples/generics/constraint": {
+    "zell": "0.1.5",
+    "hash": "264cfea6"
+  },
+  "examples/generics/functions": {
+    "zell": "0.1.5",
+    "hash": "3ce2b158"
+  },
+  "examples/generics/helpers": {
+    "zell": "0.1.5",
+    "hash": "521dcff5"
+  },
+  "examples/generics/option": {
+    "zell": "0.1.5",
+    "hash": "4116bb09"
+  },
+  "examples/generics/pair": {
+    "zell": "0.1.5",
+    "hash": "7d8a0127"
+  },
+  "examples/generics/stack": {
+    "zell": "0.1.5",
+    "hash": "aaaba678"
+  },
+  "examples/interfaces/any": {
+    "zell": "0.1.5",
+    "hash": "97b02718"
+  },
+  "examples/interfaces/capability": {
+    "zell": "0.1.5",
+    "hash": "5f94e20c"
+  },
+  "examples/interfaces/defaults": {
+    "zell": "0.1.5",
+    "hash": "ba776a7b"
+  },
+  "examples/interfaces/parameter": {
+    "zell": "0.1.5",
+    "hash": "ec64771a"
+  },
+  "examples/interfaces/registry": {
+    "zell": "0.1.5",
+    "hash": "de60cd32"
+  },
+  "examples/interfaces/shapes": {
+    "zell": "0.1.5",
+    "hash": "31739615"
+  },
   "examples/json/attributes": {
     "zell": "0.1.5",
     "hash": "7d60cd28"
@@ -138,6 +274,34 @@
   "examples/strings/split": {
     "zell": "0.1.5",
     "hash": "1031e99a"
+  },
+  "examples/structs/builder": {
+    "zell": "0.1.5",
+    "hash": "fea788d2"
+  },
+  "examples/structs/constructor": {
+    "zell": "0.1.5",
+    "hash": "705a444a"
+  },
+  "examples/structs/embedding": {
+    "zell": "0.1.5",
+    "hash": "598b3e13"
+  },
+  "examples/structs/linked": {
+    "zell": "0.1.5",
+    "hash": "e2733bd7"
+  },
+  "examples/structs/ordering": {
+    "zell": "0.1.5",
+    "hash": "6159f65d"
+  },
+  "examples/structs/printing": {
+    "zell": "0.1.5",
+    "hash": "32430e19"
+  },
+  "examples/structs/stack": {
+    "zell": "0.1.5",
+    "hash": "493a14de"
   },
   "hello/first": {
     "zell": "0.1.5",
@@ -295,6 +459,38 @@
     "zell": "0.1.5",
     "hash": "0eb814b2"
   },
+  "learn/packages/project": {
+    "zell": "0.1.5",
+    "hash": "925c9927"
+  },
+  "learn/packages/workspace": {
+    "zell": "0.1.5",
+    "hash": "6fd8ab53"
+  },
+  "learn/reflection/attributes": {
+    "zell": "0.1.5",
+    "hash": "ff0ddd0f"
+  },
+  "learn/reflection/dispatch": {
+    "zell": "0.1.5",
+    "hash": "22e01724"
+  },
+  "learn/reflection/json": {
+    "zell": "0.1.5",
+    "hash": "98b18064"
+  },
+  "learn/reflection/registry": {
+    "zell": "0.1.5",
+    "hash": "66f70649"
+  },
+  "learn/reflection/table": {
+    "zell": "0.1.5",
+    "hash": "a92235a4"
+  },
+  "learn/reflection/validate": {
+    "zell": "0.1.5",
+    "hash": "7f9e1739"
+  },
   "learn/structs/declare": {
     "zell": "0.1.5",
     "hash": "604f088d"
@@ -314,5 +510,21 @@
   "learn/structs/values": {
     "zell": "0.1.5",
     "hash": "905c5095"
+  },
+  "learn/testing/async": {
+    "zell": "0.1.5",
+    "hash": "ed1506c9"
+  },
+  "learn/testing/basics": {
+    "zell": "0.1.5",
+    "hash": "3d6c8b1c"
+  },
+  "learn/testing/bench": {
+    "zell": "0.1.5",
+    "hash": "69ebe564"
+  },
+  "learn/testing/examples": {
+    "zell": "0.1.5",
+    "hash": "3fefeceb"
   }
 }

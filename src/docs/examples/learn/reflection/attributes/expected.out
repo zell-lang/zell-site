@@ -1,0 +1,6 @@
+settings.Server Struct
+tag: config
+tag: public
+Port int SERVER_PORT - port to listen on
+Host string SERVER_HOST - no description
+started has no setting, exported: false

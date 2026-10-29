@@ -1,0 +1,4 @@
+abc -> password is shorter than 8 characters
+lowercase1 -> password needs an uppercase letter
+NoDigitsHere -> password needs a digit
+Secret123 -> ok

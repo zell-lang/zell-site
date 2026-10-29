@@ -1,0 +1,28 @@
+namespace cache
+
+import io
+
+// A lookup has three outcomes; an enum names each one.
+enum Lookup {
+    Hit(value string)
+    Stale(value string, age int)
+    Miss
+}
+
+func get(key string) Lookup {
+    switch key {
+        case "home": return Lookup.Hit("<html>home</html>")
+        case "about": return Lookup.Stale("<html>about</html>", 120)
+        default: return Lookup.Miss
+    }
+}
+
+func main() {
+    for key in ["home", "about", "blog"] {
+        switch get(key) {
+            case Lookup.Hit(v): println(key, "hit:", len(v), "bytes")
+            case Lookup.Stale(_, age): println(key, "stale for", age, "s, refreshing")
+            case Lookup.Miss: println(key, "miss")
+        }
+    }
+}

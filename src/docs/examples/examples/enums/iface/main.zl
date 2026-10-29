@@ -1,0 +1,36 @@
+namespace pricing
+
+import io
+
+interface Priced {
+    func Price() int
+}
+
+// An enum with methods implements an interface like a struct does.
+enum Plan implements Priced {
+    Free
+    Monthly(seats int)
+    Yearly(seats int)
+
+    func Price() int {
+        switch this {
+            case Plan.Free: return 0
+            case Plan.Monthly(n): return 10 * n
+            case Plan.Yearly(n): return 100 * n
+        }
+    }
+}
+
+struct Addon {
+    Cost int
+    func Price() int { return this.Cost }
+}
+
+func main() {
+    var cart []Priced = [Plan.Monthly(3), Addon{Cost: 15}, Plan.Free, Plan.Yearly(1)]
+    var total = 0
+    for item in cart {
+        total += item.Price()
+    }
+    println("total:", total)
+}

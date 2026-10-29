@@ -1,0 +1,11 @@
+[package]
+name = "shop"
+version = "0.1.0"
+namespace = "shop"
+entry = "src/main.zl"
+
+[dependencies]
+money = { path = "libs/money" }
+
+[workspace]
+members = ["libs/*"]

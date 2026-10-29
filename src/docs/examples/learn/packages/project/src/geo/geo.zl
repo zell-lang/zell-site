@@ -1,0 +1,27 @@
+namespace trips.geo
+
+// Point is exported: its name starts with an upper-case letter.
+struct Point {
+    Lat float
+    Lon float
+}
+
+const earthRadiusKm = 6371.0            // lower case: private to trips.geo
+
+// DistanceKm is the great-circle distance between two points.
+func DistanceKm(a Point, b Point) float {
+    var dLat = radians(b.Lat - a.Lat)
+    var dLon = radians(b.Lon - a.Lon)
+    var h = math.Sin(dLat / 2.0) * math.Sin(dLat / 2.0) +
+        math.Cos(radians(a.Lat)) * math.Cos(radians(b.Lat)) * math.Sin(dLon / 2.0) * math.Sin(dLon / 2.0)
+    return 2.0 * earthRadiusKm * math.Atan2(math.Sqrt(h), math.Sqrt(1.0 - h))
+}
+
+// Round rounds to whole kilometres.
+func Round(km float) int {
+    return int(math.Round(km))
+}
+
+func radians(deg float) float {
+    return deg * math.Pi / 180.0
+}

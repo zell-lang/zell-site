@@ -1,0 +1,5 @@
+[package]
+name = "trips"
+version = "0.1.0"
+namespace = "trips"
+entry = "src/main.zl"

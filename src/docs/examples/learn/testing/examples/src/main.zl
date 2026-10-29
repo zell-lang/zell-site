@@ -1,0 +1,22 @@
+namespace units
+
+import io
+
+// Bytes formats a size in bytes with a binary unit: 1536 -> "1.5 KiB".
+func Bytes(n int) string {
+    var units = ["B", "KiB", "MiB", "GiB"]
+    var size = float(n)
+    var i = 0
+    for size >= 1024.0 && i < len(units) - 1 {
+        size /= 1024.0
+        i += 1
+    }
+    if i == 0 {
+        return strconv.Itoa(n) + " B"
+    }
+    return fmt.Format("{0} {1}", math.Round(size * 10.0) / 10.0, units[i])
+}
+
+func main() {
+    println(Bytes(1536))
+}

@@ -1,0 +1,29 @@
+namespace requests
+
+import io
+
+struct Request {
+    Method  string
+    Url     string
+    Headers []string
+
+    // Methods that return `this` can be chained.
+    func Header(name string, value string) *Request {
+        this.Headers = append(this.Headers, name + ": " + value)
+        return this
+    }
+
+    func Post() *Request {
+        this.Method = "POST"
+        return this
+    }
+}
+
+func main() {
+    var r = new Request{Method: "GET", Url: "/users"}
+    r.Post().Header("Accept", "json").Header("X-Id", "7")
+    println(r.Method, r.Url)
+    for h in r.Headers {
+        println(" ", h)
+    }
+}

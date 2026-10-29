@@ -1,0 +1,29 @@
+namespace urls
+
+import io
+
+// Slug turns a title into a URL path segment: "Hello, World" -> "hello-world".
+func Slug(title string) string {
+    var words []string = []
+    for w in strings.Fields(strings.ToLower(title)) {
+        var clean = strings.TrimRight(w, ",.!?")
+        if clean != "" {
+            words = append(words, clean)
+        }
+    }
+    return strings.Join(words, "-")
+}
+
+// ParsePort parses a TCP port number.
+func ParsePort(s string) int! {
+    var n = strings.ToInt(s)?("port")
+    if n < 1 || n > 65535 {
+        return error("port " + s + " out of range")
+    }
+    return n
+}
+
+func main() {
+    println(Slug("Hello, World!"))
+    println(try ParsePort("8080") else 0)
+}
