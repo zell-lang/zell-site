@@ -13,8 +13,13 @@
 .docs-nav a:hover { text-decoration: none; background: var(--bg-alt); }
 .docs-nav a[aria-current="page"] { border-left-color: var(--accent); color: var(--accent); font-weight: 600; background: var(--bg-alt); }
 .docs-nav-home { font-weight: 600; margin-bottom: 12px; }
-.docs-nav-section { margin-top: 18px; }
-.docs-nav-title { font-size: .76rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--fg-muted) !important; }
+.docs-nav-title { display: flex; align-items: center; gap: 6px; width: 100%; font: inherit; font-size: .76rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--fg-muted); background: none; border: 0; padding: 6px 12px 6px 6px; cursor: pointer; text-align: left; border-radius: 3px; }
+.docs-nav-title:hover { color: var(--fg); background: var(--bg-alt); }
+.docs-nav-title svg { flex: none; width: 14px; height: 14px; transition: transform .15s; }
+.docs-nav-title[aria-expanded="true"] svg { transform: rotate(90deg); }
+.docs-nav-section.current .docs-nav-title { color: var(--fg); }
+.docs-nav-section { margin-top: 6px; }
+.docs-nav ul a { padding-left: 26px; }
 .docs-nav ul { list-style: none; margin: 4px 0 0; padding: 0; }
 .docs-nav a.planned { color: var(--fg-muted); }
 .status-dot { flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--bar-other); }
