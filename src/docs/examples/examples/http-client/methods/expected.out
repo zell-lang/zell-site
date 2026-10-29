@@ -1,0 +1,3 @@
+PUT item 3, body "blue", token Bearer t0k3n
+DELETE item 3, body "", token Bearer t0k3n
+POST item 4, body "name=lamp", token Bearer t0k3n

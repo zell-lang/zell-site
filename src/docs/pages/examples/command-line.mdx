@@ -1,0 +1,85 @@
+A program reads its arguments with `os.Args()`, its environment with `os.Getenv`, and standard input
+with `io.ReadAll`. The `cli` namespace adds typed flags, subcommands and generated help. Arguments after
+`--` in `zell run` go to the program. The output under each example is a run without arguments, and
+the shell blocks show other runs.
+
+## Arguments
+
+<Example id="examples/command-line/args" />
+
+```sh
+$ zell run . -- ann "bob lee"
+1. hello, ann
+2. hello, bob lee
+```
+
+## Flags
+
+`@cli.flag` turns struct fields into flags. Defaults come from the field values, `env:` names an
+environment variable to fall back to, and `--help` is generated.
+
+<Example id="examples/command-line/flags" />
+
+```sh
+$ zell run . -- -w 640 --keep a.jpg b.jpg
+a.jpg -> width 640, keep true, png
+b.jpg -> width 640, keep true, png
+$ RESIZE_FORMAT=webp zell run . -- x.jpg
+x.jpg -> width 800, keep false, webp
+$ zell run . -- --widht 3 x.jpg
+error: unknown flag --widht (did you mean "--width"?)
+Run 'resize --help' for usage.
+$ zell run . -- --help
+resize images
+
+Usage:
+  resize [flags]
+
+Flags:
+  -w, --width int      target width in pixels (default 800)
+      --keep           keep the aspect ratio
+      --format string  output format (default png, env $RESIZE_FORMAT)
+  -h, --help           Show help
+      --version        Print the version
+```
+
+`app.Run` returns the exit code: 0 on success, 1 when the command fails, 2 for a usage error.
+
+## Subcommands
+
+This program runs the app on fixed argument lists to show several runs in one output; a real tool
+calls `os.Exit(app().Run(os.Args()))`.
+
+<Example id="examples/command-line/subcommands" />
+
+## Environment variables
+
+<Example id="examples/command-line/env" />
+
+## Exit codes and stderr
+
+`io.Eprintln` writes to standard error. `os.Exit` ends the process at once and skips pending `defer`
+calls, so call it at the top of the program, after everything else has finished.
+
+<Example id="examples/command-line/exitcode" />
+
+```sh
+$ zell run . -- main.zl notes.txt; echo "exit $?"
+ok   main.zl
+bad  notes.txt: not a .zl file
+exit 1
+```
+
+## Standard input
+
+<Example id="examples/command-line/stdin" />
+
+```sh
+$ printf 'one two\nthree\n' | zell run .
+2 lines 3 words 14 bytes
+```
+
+## Next
+
+[Build a CLI tool](/docs/guides/cli-tool): a complete command-line program from package to release
+binaries.

@@ -1,0 +1,7 @@
+[req-1] load ann
+[req-1] render ann
+page for ann
+[req-2] load bob
+[req-2] render bob
+page for bob
+[none] outside any request

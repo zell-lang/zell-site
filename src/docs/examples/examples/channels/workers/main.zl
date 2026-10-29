@@ -1,0 +1,38 @@
+namespace pool
+
+import io
+
+async func worker(jobs task.Channel<int>, results task.Channel<(int, int)>) {
+    for n in jobs {
+        await task.Delay(n % 4)         // jobs take different times
+        await results.Send((n, n * n))
+    }
+}
+
+async func main() {
+    var jobs = task.Channel<int>(10)
+    var results = task.Channel<(int, int)>(10)
+
+    // Three workers share one job queue.
+    var ws []Task<void> = []
+    for _ in 0..3 {
+        ws = append(ws, worker(jobs, results))
+    }
+    for n in 1..10 {
+        await jobs.Send(n)
+    }
+    jobs.Close()
+
+    // Results arrive in completion order; index them to print in job order.
+    var squares = map[int]int{}
+    for _ in 1..10 {
+        var (n, sq) = try await results.Recv() else (0, 0)
+        squares[n] = sq
+    }
+    await task.All(ws)
+    var ordered []int
+    for n in maps.SortedKeys(squares) {
+        ordered = append(ordered, squares[n])
+    }
+    println(ordered)
+}

@@ -1,0 +1,42 @@
+namespace mw
+
+import io
+import net
+
+// Middleware wraps a Handler and returns a new one.
+func requireToken(token string) func(http.Handler) http.Handler {
+    return (next http.Handler) => http.Func(async func(req *http.Request, res *http.Response) void! {
+        if req.Header("Authorization") != "Bearer " + token {
+            res.Text(401, "unauthorized")
+            return
+        }
+        await next.Serve(req, res)?
+    })
+}
+
+func tag(name string) func(http.Handler) http.Handler {
+    return (next http.Handler) => http.Func(async func(req *http.Request, res *http.Response) void! {
+        await next.Serve(req, res)?
+        res.AddHeader("X-Middleware", name)    // runs after the handler
+    })
+}
+
+async func main() void! {
+    var r = http.NewRouter()
+    r.Use(tag("outer"))
+    r.Use(requireToken("s3cret"))
+    r.Get("/admin", async func(req *http.Request, res *http.Response) void! {
+        res.Text(200, "welcome")
+    })
+    var srv = http.Server{Addr: "127.0.0.1:0", Handler: r}
+    srv.Listen()?
+    var serving = srv.Serve()
+
+    var anon = await http.Get(srv.URL() + "/admin")?
+    println(anon.Status, anon.Body, anon.Header("X-Middleware"))
+    var ok = await http.NewRequest("GET", srv.URL() + "/admin").Header("Authorization", "Bearer s3cret").Send()?
+    println(ok.Status, ok.Body, ok.Header("X-Middleware"))
+
+    await srv.Shutdown()
+    await serving?
+}

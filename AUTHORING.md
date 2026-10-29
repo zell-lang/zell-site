@@ -79,3 +79,4 @@ your report instead. Do not commit, push or deploy: the maintainer checks everyt
 - `zell build -o name` does not add `.exe` for Windows targets; say so when showing `-o`.
 - `zell run .` leaves `target/` (and `zell.lock`) in a package example directory. Both are
   git-ignored, but delete `target/` when you are done.
+- On Windows `fs.Join` and `fs.Dir` produce backslashes: do not print joined paths in examples.

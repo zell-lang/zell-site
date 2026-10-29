@@ -172,7 +172,7 @@
         {
           "slug": "files",
           "title": "Files and directories",
-          "status": "planned",
+          "status": "draft",
           "summary": "Reading and writing files, line by line, walking directories."
         },
         {
@@ -184,37 +184,37 @@
         {
           "slug": "time",
           "title": "Time",
-          "status": "planned",
+          "status": "draft",
           "summary": "Now, durations, formatting and parsing dates, timers."
         },
         {
           "slug": "tasks",
           "title": "Tasks",
-          "status": "planned",
+          "status": "draft",
           "summary": "Starting tasks, awaiting all or any, timeouts and cancellation."
         },
         {
           "slug": "channels",
           "title": "Channels",
-          "status": "planned",
+          "status": "draft",
           "summary": "Buffered and unbuffered channels, select, worker pools, pipelines."
         },
         {
           "slug": "http-client",
           "title": "HTTP client",
-          "status": "planned",
+          "status": "draft",
           "summary": "GET and POST requests, headers, JSON bodies, timeouts."
         },
         {
           "slug": "http-server",
           "title": "HTTP server",
-          "status": "planned",
+          "status": "draft",
           "summary": "Routes, path parameters, JSON responses, middleware."
         },
         {
           "slug": "command-line",
           "title": "Command-line programs",
-          "status": "planned",
+          "status": "draft",
           "summary": "Arguments, flags, environment variables, exit codes."
         }
       ]

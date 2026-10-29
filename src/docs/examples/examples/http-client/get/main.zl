@@ -1,0 +1,28 @@
+namespace fetch
+
+import io
+import net
+
+async func main() void! {
+    // A local server to talk to; port 0 picks a free port.
+    var r = http.NewRouter()
+    r.Get("/hello", async func(req *http.Request, res *http.Response) void! {
+        res.SetHeader("X-Server", "demo")
+        res.Text(200, "hello from the server")
+    })
+    var srv = http.Server{Addr: "127.0.0.1:0", Handler: r}
+    srv.Listen()?
+    var serving = srv.Serve()
+
+    // http.Get returns the whole response; the body is a string.
+    var res = await http.Get(srv.URL() + "/hello")?
+    println(res.Status, res.Body)
+    println(res.Header("content-type"), res.Header("X-Server"))
+
+    // A 404 is a response, not an error: check Status.
+    var missing = await http.Get(srv.URL() + "/nope")?
+    println(missing.Status, http.StatusText(missing.Status))
+
+    await srv.Shutdown()
+    await serving?
+}

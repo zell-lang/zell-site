@@ -1,0 +1,37 @@
+namespace todos
+
+import io
+import net
+
+struct Todo {
+    Id    int
+    Title string
+    Done  bool
+}
+
+async func main() void! {
+    var r = http.NewRouter()
+    r.Post("/todos", async func(req *http.Request, res *http.Response) void! {
+        var t = req.JSON<Todo>()?
+        t.Id = 7
+        res.SendJSON(201, t)
+    })
+    r.Get("/todos/7", async func(req *http.Request, res *http.Response) void! {
+        res.SendJSON(200, Todo{Id: 7, Title: "write docs", Done: true})
+    })
+    var srv = http.Server{Addr: "127.0.0.1:0", Handler: r}
+    srv.Listen()?
+    var serving = srv.Serve()
+
+    // POST a JSON body and decode the JSON answer.
+    var res = await http.NewRequest("POST", srv.URL() + "/todos").JSON(Todo{Title: "write docs"}).Send()?
+    var created = res.JSON<Todo>()?
+    println(res.Status, res.Header("Content-Type"), created.Id, created.Title)
+
+    // GetJSON does the GET and the decoding in one step.
+    var t = await http.GetJSON<Todo>(srv.URL() + "/todos/7")?
+    println(t.Title, t.Done)
+
+    await srv.Shutdown()
+    await serving?
+}

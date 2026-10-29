@@ -1,0 +1,39 @@
+namespace todo
+
+import io
+
+struct AddFlags {
+    @cli.flag(short: "p", help: "priority 1-3") Priority int = 2
+}
+
+func app() cli.App {
+    var add = cli.Command{
+        Name: "add",
+        Help: "add a task",
+        Args: "<text...>",
+        Flags: cli.FlagsOf<AddFlags>(),
+        Run: func(c *cli.Context) void! {
+            var f = cli.Bind<AddFlags>(c)?
+            println(fmt.Format("added \"{0}\" with priority {1}", strings.Join(c.Args, " "), f.Priority))
+        },
+    }
+    var list = cli.Command{
+        Name: "list",
+        Aliases: ["ls"],
+        Help: "list tasks",
+        Run: func(c *cli.Context) void! {
+            println("1. write docs")
+        },
+    }
+    return cli.App{Name: "todo", Version: "0.1.0", Help: "a tiny task list", Commands: [add, list]}
+}
+
+func main() {
+    // A real program passes os.Args(); fixed lists show several runs at once.
+    for args in [["todo", "add", "-p", "1", "buy", "milk"], ["todo", "ls"], ["todo", "lst"], ["todo", "--help"]] {
+        var a = app()
+        a.Errors = io.Discard()     // keep error text off stderr in this demo
+        var code = a.Run(args)
+        println("[exit", code, "]")
+    }
+}

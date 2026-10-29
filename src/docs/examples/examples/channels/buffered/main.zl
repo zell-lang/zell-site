@@ -1,0 +1,23 @@
+namespace buffered
+
+import io
+
+async func main() {
+    // A buffered channel accepts values until it is full, with no receiver.
+    var ch = task.Channel<string>(3)
+    await ch.Send("a")
+    await ch.Send("b")
+    println("len", ch.Len(), "cap", ch.Cap())
+
+    // Closing keeps the buffered values; receivers drain them first.
+    ch.Close()
+    println("closed:", ch.IsClosed())
+    for v in ch {
+        println("got", v)
+    }
+
+    // Recv on a closed, empty channel is an error.
+    try await ch.Recv() catch err {
+        println("recv:", err)
+    }
+}

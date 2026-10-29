@@ -1,0 +1,46 @@
+namespace notes
+
+import io
+import net
+
+struct Note {
+    Id   int
+    Text string
+}
+
+struct Store {
+    mu    task.Mutex
+    notes []Note
+
+    async func Add(text string) Note {
+        await this.mu.Lock()
+        defer this.mu.Unlock()
+        var n = Note{Id: len(this.notes) + 1, Text: text}
+        this.notes = append(this.notes, n)
+        return n
+    }
+}
+
+async func main() void! {
+    var store = new Store{}
+    var r = http.NewRouter()
+    r.Post("/notes", async func(req *http.Request, res *http.Response) void! {
+        var input = req.JSON<Note>()?       // a bad body becomes an error, see below
+        res.SendJSON(201, await store.Add(input.Text))
+    })
+    r.Get("/notes", async func(req *http.Request, res *http.Response) void! {
+        res.SendJSON(200, store.notes)
+    })
+
+    var srv = http.Server{Addr: "127.0.0.1:0", Handler: r}
+    srv.Listen()?
+    var serving = srv.Serve()
+    for text in ["buy milk", "call ann"] {
+        var res = await http.Post(srv.URL() + "/notes", fmt.Format("{\"Text\": \"{0}\"}", text), "application/json")?
+        println(res.Status, res.Body)
+    }
+    var list = await http.Get(srv.URL() + "/notes")?
+    println(list.Status, list.Header("Content-Type"), list.Body)
+    await srv.Shutdown()
+    await serving?
+}

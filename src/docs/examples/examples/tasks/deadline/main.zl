@@ -1,0 +1,23 @@
+namespace deadline
+
+import io
+
+async func render(ms int) string {
+    await task.Delay(ms)
+    return fmt.Format("rendered in {0}ms", ms)
+}
+
+async func main() {
+    // task.Timeout reports whether a task finished in time; it does not cancel it.
+    var fast = render(5)
+    if await task.Timeout(fast, 1000) {
+        println(await fast)
+    }
+
+    var slow = render(200)
+    if !await task.Timeout(slow, 10) {
+        println("still rendering, showing a placeholder")
+    }
+    // The task kept running; its result is still available.
+    println(await slow)
+}

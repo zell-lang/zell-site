@@ -1,0 +1,25 @@
+namespace settings
+
+import io
+
+// Read a config file, falling back to defaults when it does not exist.
+func loadConfig(path string) string! {
+    var text = try io.ReadFile(path) catch err {
+        if errors.Is(err, fs.ErrNotFound) {
+            return "port=8080"
+        }
+        return err
+    }
+    return strings.Trim(text)
+}
+
+func main() void! {
+    var dir = fs.Join(fs.TempDir(), "zell-missing-" + strconv.Itoa(os.Pid()))
+    fs.MkdirAll(dir)?
+    defer func() { _ = fs.RemoveAll(dir) }()
+    var path = fs.Join(dir, "app.conf")
+
+    println("before:", loadConfig(path)?)
+    io.WriteFile(path, "port=9000\n")?
+    println("after:", loadConfig(path)?)
+}

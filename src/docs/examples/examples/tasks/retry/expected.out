@@ -1,0 +1,9 @@
+attempt 1 failed: temporary failure
+waiting 2 ms
+attempt 2 failed: temporary failure
+waiting 4 ms
+ok after 3 calls
+attempt 1 failed: temporary failure
+waiting 2 ms
+attempt 2 failed: temporary failure
+gave up: temporary failure

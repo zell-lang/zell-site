@@ -1,0 +1,23 @@
+namespace ticker
+
+import io
+
+async func main() {
+    // A Ticker fires every period until stopped.
+    var tk = time.NewTicker(time.Milliseconds(10))
+    var ticks = 0
+    for ticks < 3 {
+        await tk.Tick()
+        ticks += 1
+        println("tick", ticks)
+    }
+    tk.Stop()
+
+    // A Timer fires once; Stop before it fires cancels it.
+    var timer = time.NewTimer(time.Seconds(60))
+    println("stopped:", timer.Stop())
+
+    // time.After resolves after a Duration (like task.Delay).
+    var t = await time.After(time.Milliseconds(5))
+    println("after:", !t.IsZero())
+}

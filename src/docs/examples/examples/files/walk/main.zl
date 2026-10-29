@@ -1,0 +1,33 @@
+namespace tree
+
+import io
+
+// walk prints a directory tree, depth first, entries in sorted order.
+func walk(dir string, depth int) int! {
+    var files = 0
+    for name in fs.ReadDir(dir)? {
+        var path = fs.Join(dir, name)
+        if fs.IsDir(path) {
+            println(strings.Repeat("  ", depth) + name + "/")
+            files += walk(path, depth + 1)?
+        } else {
+            println(strings.Repeat("  ", depth) + name, fs.Size(path)?)
+            files += 1
+        }
+    }
+    return files
+}
+
+func main() void! {
+    var root = fs.Join(fs.TempDir(), "zell-walk-" + strconv.Itoa(os.Pid()))
+    defer func() { _ = fs.RemoveAll(root) }()
+    fs.MkdirAll(fs.Join(root, "docs/img"))?
+    fs.MkdirAll(fs.Join(root, "src"))?
+    io.WriteFile(fs.Join(root, "README.md"), "# demo\n")?
+    io.WriteFile(fs.Join(root, "docs/guide.md"), "guide\n")?
+    io.WriteFile(fs.Join(root, "docs/img/logo.svg"), "<svg/>")?
+    io.WriteFile(fs.Join(root, "src/main.zl"), "namespace demo\n")?
+
+    var n = walk(root, 0)?
+    println(n, "files")
+}

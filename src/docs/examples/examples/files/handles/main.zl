@@ -1,0 +1,30 @@
+namespace logfile
+
+import io
+
+func main() void! {
+    var dir = fs.Join(fs.TempDir(), "zell-handles-" + strconv.Itoa(os.Pid()))
+    fs.MkdirAll(dir)?
+    defer func() { _ = fs.RemoveAll(dir) }()
+    var path = fs.Join(dir, "app.log")
+
+    // os.Create opens a file for writing; Close flushes it.
+    var out = os.Create(path)?
+    for i in 1..4 {
+        out.WriteString(fmt.Format("event {0}\n", i))?
+    }
+    out.Close()?
+
+    // OpenFile with flags: append to the existing file.
+    var app = os.OpenFile(path, os.O_WRONLY | os.O_APPEND, 0o644)?
+    app.WriteString("event 4\n")?
+    app.Close()?
+
+    var info = os.Stat(path)?
+    println(info.Name, info.Size, info.IsDir)
+
+    var f = os.Open(path)?
+    var data = f.ReadAll()?
+    f.Close()?
+    print(strings.FromBytes(data))
+}

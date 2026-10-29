@@ -1,0 +1,37 @@
+`net.http` has an asynchronous HTTP/1.1 and HTTP/2 client. Each program here first starts a small
+server on `127.0.0.1` with a free port, so it runs without internet access; replace `srv.URL()` with a
+real address in your own code. Every program has `import net` and an `async func main`.
+
+## GET
+
+<Example id="examples/http-client/get" />
+
+## Query parameters and headers
+
+`http.NewRequest` returns a request builder; `Send` sends it with the default client.
+
+<Example id="examples/http-client/request" />
+
+## JSON bodies
+
+<Example id="examples/http-client/json" />
+
+## Other methods and default headers
+
+A `Client` holds settings shared by many requests and pools connections.
+
+<Example id="examples/http-client/methods" />
+
+## Timeouts
+
+<Example id="examples/http-client/timeout" />
+
+## Status codes and errors
+
+`http.Get` fails only when no response arrives. Decide yourself which statuses count as errors.
+
+<Example id="examples/http-client/errors" />
+
+## Next
+
+[HTTP server](/docs/examples/http-server): routes, parameters, JSON and middleware.

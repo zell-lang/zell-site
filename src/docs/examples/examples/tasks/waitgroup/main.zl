@@ -1,0 +1,28 @@
+namespace batch
+
+import io
+
+struct Results {
+    mu    task.Mutex
+    total int
+}
+
+async func process(n int, r *Results, wg *task.WaitGroup) {
+    defer wg.Done()
+    await task.Delay(n % 3)
+    await r.mu.Lock()
+    r.total += n
+    r.mu.Unlock()
+}
+
+async func main() {
+    // A WaitGroup waits for tasks you started but did not keep.
+    var wg = new task.WaitGroup{}
+    var r = new Results{}
+    for n in 1..101 {
+        wg.Add(1)
+        _ = process(n, r, wg)
+    }
+    await wg.Wait()
+    println("sum:", r.total, "pending:", wg.Count())
+}

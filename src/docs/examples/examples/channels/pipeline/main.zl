@@ -1,0 +1,41 @@
+namespace stages
+
+import io
+
+async func generate(n int, out task.Channel<int>) {
+    for i in 1..n + 1 {
+        await out.Send(i)
+    }
+    out.Close()
+}
+
+async func square(input task.Channel<int>, out task.Channel<int>) {
+    for v in input {
+        await out.Send(v * v)
+    }
+    out.Close()
+}
+
+async func keepOdd(input task.Channel<int>, out task.Channel<int>) {
+    for v in input {
+        if v % 2 == 1 {
+            await out.Send(v)
+        }
+    }
+    out.Close()
+}
+
+async func main() {
+    // Each stage is a task; channels connect them. Closing flows downstream.
+    var nums = task.Channel<int>(0)
+    var squares = task.Channel<int>(0)
+    var odd = task.Channel<int>(0)
+    var stages = [generate(9, nums), square(nums, squares), keepOdd(squares, odd)]
+
+    var got []int
+    for v in odd {
+        got = append(got, v)
+    }
+    await task.All(stages)
+    println(got, slices.Sum(got))
+}

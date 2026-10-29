@@ -1,0 +1,25 @@
+namespace deadlines
+
+import io
+
+func main() {
+    var start = time.Date(2026, 10, 1, 9, 0, 0, 0, nil)
+    var end = time.Date(2026, 10, 30, 17, 30, 0, 0, nil)
+
+    // Sub gives a Duration; Add moves a Time.
+    var d = end.Sub(start)
+    println(d, int(d.Hours() / 24.0), "days")
+    println(start.Add(time.Hours(36)).Format(time.DateTime))
+
+    println(start.Before(end), start.After(end), start.Equal(start.Add(time.Seconds(0))))
+
+    // Time has Compare, so slices.Sort orders it.
+    var times = [end, start, start.Add(time.Hours(24 * 7))]
+    slices.Sort(times)
+    for t in times {
+        println(t.Format(time.DateOnly))
+    }
+
+    // Truncate to the hour.
+    println(time.Date(2026, 10, 30, 17, 42, 9, 0, nil).Truncate(time.Hours(1)).Format(time.TimeOnly))
+}

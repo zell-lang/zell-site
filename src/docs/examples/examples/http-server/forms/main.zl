@@ -1,0 +1,31 @@
+namespace signup
+
+import io
+import net
+
+async func main() void! {
+    var r = http.NewRouter()
+    r.Post("/signup", async func(req *http.Request, res *http.Response) void! {
+        // A URL-encoded form body parses like a query string.
+        var form = http.ParseQuery(req.Body)
+        if form["email"] == "" {
+            res.Redirect(303, "/signup?error=email")
+            return
+        }
+        res.SetCookie(http.Cookie{Name: "session", Value: "abc123", Path: "/"})
+        res.Html(200, "<p>Welcome, " + form["name"] + "</p>")
+    })
+    var srv = http.Server{Addr: "127.0.0.1:0", Handler: r}
+    srv.Listen()?
+    var serving = srv.Serve()
+
+    // MaxRedirects -1: return the redirect instead of following it.
+    var client = http.Client{MaxRedirects: -1}
+    var ok = await client.Send(http.NewRequest("POST", srv.URL() + "/signup").Form(map[string]string{"name": "Ann Lee", "email": "ann@example.com"}))?
+    println(ok.Status, ok.Body, ok.Header("Set-Cookie"))
+    var bad = await client.Send(http.NewRequest("POST", srv.URL() + "/signup").Form(map[string]string{"name": "Bob"}))?
+    println(bad.Status, bad.Header("Location"))
+
+    await srv.Shutdown()
+    await serving?
+}

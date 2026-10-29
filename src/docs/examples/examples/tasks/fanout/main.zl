@@ -1,0 +1,26 @@
+namespace fanout
+
+import io
+
+async func fetchSize(page string) int {
+    // Pages answer in a different order from the one they were asked in.
+    await task.Delay(30 - len(page) * 3)
+    return len(page) * 100
+}
+
+async func main() {
+    var pages = ["home", "about", "pricing", "blog"]
+
+    // Start every request first, then wait for all of them.
+    var ts []Task<int> = []
+    for p in pages {
+        ts = append(ts, fetchSize(p))
+    }
+    var sizes = await task.All(ts)
+
+    // Results come back in the order of the slice, not the order of completion.
+    for i, p in pages {
+        println(p, sizes[i])
+    }
+    println("total:", slices.Sum(sizes))
+}

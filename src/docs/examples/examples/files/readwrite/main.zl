@@ -1,0 +1,24 @@
+namespace notes
+
+import io
+
+func main() void! {
+    // A scratch directory of our own, removed at the end.
+    var dir = fs.Join(fs.TempDir(), "zell-notes-" + strconv.Itoa(os.Pid()))
+    fs.MkdirAll(dir)?
+    defer func() { _ = fs.RemoveAll(dir) }()
+
+    var path = fs.Join(dir, "notes.txt")
+
+    // WriteFile creates or replaces the whole file.
+    io.WriteFile(path, "buy milk\n")?
+    // AppendFile adds to the end.
+    fs.AppendFile(path, "call bob\n")?
+
+    var text = io.ReadFile(path)?
+    print(text)
+    println("size:", fs.Size(path)?, "bytes")
+
+    fs.Rename(path, fs.Join(dir, "done.txt"))?
+    println(fs.Exists(path), fs.Exists(fs.Join(dir, "done.txt")))
+}

@@ -31,6 +31,34 @@
     "zell": "0.1.5",
     "hash": "3da12ee2"
   },
+  "examples/channels/broadcast": {
+    "zell": "0.1.5",
+    "hash": "431a75a1"
+  },
+  "examples/channels/buffered": {
+    "zell": "0.1.5",
+    "hash": "a77344ea"
+  },
+  "examples/channels/fanin": {
+    "zell": "0.1.5",
+    "hash": "692cd22f"
+  },
+  "examples/channels/next": {
+    "zell": "0.1.5",
+    "hash": "c120323c"
+  },
+  "examples/channels/pipeline": {
+    "zell": "0.1.5",
+    "hash": "c2404400"
+  },
+  "examples/channels/timeout": {
+    "zell": "0.1.5",
+    "hash": "7f95733b"
+  },
+  "examples/channels/workers": {
+    "zell": "0.1.5",
+    "hash": "6acaf363"
+  },
   "examples/closures/capture": {
     "zell": "0.1.5",
     "hash": "72eefbe5"
@@ -58,6 +86,30 @@
   "examples/closures/variadic": {
     "zell": "0.1.5",
     "hash": "a4494305"
+  },
+  "examples/command-line/args": {
+    "zell": "0.1.5",
+    "hash": "ecf5a1ea"
+  },
+  "examples/command-line/env": {
+    "zell": "0.1.5",
+    "hash": "492e63d2"
+  },
+  "examples/command-line/exitcode": {
+    "zell": "0.1.5",
+    "hash": "f70883b4"
+  },
+  "examples/command-line/flags": {
+    "zell": "0.1.5",
+    "hash": "6377e50d"
+  },
+  "examples/command-line/stdin": {
+    "zell": "0.1.5",
+    "hash": "846bc718"
+  },
+  "examples/command-line/subcommands": {
+    "zell": "0.1.5",
+    "hash": "7710ff41"
   },
   "examples/enums/iface": {
     "zell": "0.1.5",
@@ -115,6 +167,34 @@
     "zell": "0.1.5",
     "hash": "d2bd286b"
   },
+  "examples/files/dirs": {
+    "zell": "0.1.5",
+    "hash": "e46460d7"
+  },
+  "examples/files/handles": {
+    "zell": "0.1.5",
+    "hash": "e688fa30"
+  },
+  "examples/files/lines": {
+    "zell": "0.1.5",
+    "hash": "7c8ff4f6"
+  },
+  "examples/files/missing": {
+    "zell": "0.1.5",
+    "hash": "359239a9"
+  },
+  "examples/files/paths": {
+    "zell": "0.1.5",
+    "hash": "c76ce67e"
+  },
+  "examples/files/readwrite": {
+    "zell": "0.1.5",
+    "hash": "684dfe99"
+  },
+  "examples/files/walk": {
+    "zell": "0.1.5",
+    "hash": "6a232382"
+  },
   "examples/generics/collections": {
     "zell": "0.1.5",
     "hash": "22e416b0"
@@ -142,6 +222,58 @@
   "examples/generics/stack": {
     "zell": "0.1.5",
     "hash": "aaaba678"
+  },
+  "examples/http-client/errors": {
+    "zell": "0.1.5",
+    "hash": "7b91f41c"
+  },
+  "examples/http-client/get": {
+    "zell": "0.1.5",
+    "hash": "6a4e6ca6"
+  },
+  "examples/http-client/json": {
+    "zell": "0.1.5",
+    "hash": "455b15d3"
+  },
+  "examples/http-client/methods": {
+    "zell": "0.1.5",
+    "hash": "c816c17c"
+  },
+  "examples/http-client/request": {
+    "zell": "0.1.5",
+    "hash": "d4f6218d"
+  },
+  "examples/http-client/timeout": {
+    "zell": "0.1.5",
+    "hash": "cfb0b4df"
+  },
+  "examples/http-server/errors": {
+    "zell": "0.1.5",
+    "hash": "b85e10aa"
+  },
+  "examples/http-server/forms": {
+    "zell": "0.1.5",
+    "hash": "b9bd2f84"
+  },
+  "examples/http-server/hello": {
+    "zell": "0.1.5",
+    "hash": "43f57894"
+  },
+  "examples/http-server/json": {
+    "zell": "0.1.5",
+    "hash": "5fe3cf94"
+  },
+  "examples/http-server/middleware": {
+    "zell": "0.1.5",
+    "hash": "36f18ab8"
+  },
+  "examples/http-server/params": {
+    "zell": "0.1.5",
+    "hash": "64361071"
+  },
+  "examples/http-server/recorder": {
+    "zell": "0.1.5",
+    "hash": "a3545129"
   },
   "examples/interfaces/any": {
     "zell": "0.1.5",
@@ -306,6 +438,66 @@
   "examples/structs/stack": {
     "zell": "0.1.5",
     "hash": "493a14de"
+  },
+  "examples/tasks/context": {
+    "zell": "0.1.5",
+    "hash": "1cf2bac3"
+  },
+  "examples/tasks/deadline": {
+    "zell": "0.1.5",
+    "hash": "4f036942"
+  },
+  "examples/tasks/fanout": {
+    "zell": "0.1.5",
+    "hash": "26883f58"
+  },
+  "examples/tasks/limit": {
+    "zell": "0.1.5",
+    "hash": "4d79e81e"
+  },
+  "examples/tasks/parallel": {
+    "zell": "0.1.5",
+    "hash": "b68b153b"
+  },
+  "examples/tasks/retry": {
+    "zell": "0.1.5",
+    "hash": "f821b6b1"
+  },
+  "examples/tasks/waitgroup": {
+    "zell": "0.1.5",
+    "hash": "e47f14c4"
+  },
+  "examples/time/arithmetic": {
+    "zell": "0.1.5",
+    "hash": "a97ef8e4"
+  },
+  "examples/time/dates": {
+    "zell": "0.1.5",
+    "hash": "d15710de"
+  },
+  "examples/time/durations": {
+    "zell": "0.1.5",
+    "hash": "990b0982"
+  },
+  "examples/time/formatting": {
+    "zell": "0.1.5",
+    "hash": "225d841f"
+  },
+  "examples/time/measure": {
+    "zell": "0.1.5",
+    "hash": "1715f4ad"
+  },
+  "examples/time/parsing": {
+    "zell": "0.1.5",
+    "hash": "ae21b0df"
+  },
+  "examples/time/ticker": {
+    "zell": "0.1.5",
+    "hash": "6538991e"
+  },
+  "examples/time/zones": {
+    "zell": "0.1.5",
+    "hash": "21134738"
   },
   "guides/cli-tool": {
     "zell": "0.1.5",

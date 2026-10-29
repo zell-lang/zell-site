@@ -3,12 +3,6 @@ programs. The design document `DESIGN.md` in the compiler repository is the sour
 states the same rules in English. Where the released compiler, zell 0.1.5, does not yet do what the design
 says, a note marks the difference and describes what 0.1.5 does.
 
-<Callout type="note">
-This page currently covers the language through [Declarations and scope](#declarations-and-scope).
-Expressions, statements, errors, memory, concurrency, reflection and program execution follow in a later
-revision; until then, the [Learn](/docs/learn/basics) chapters describe them.
-</Callout>
-
 ## Notation
 
 The syntax is given in Extended Backus-Naur Form, in the notation of the grammar file `grammar/zell.bnf`:
@@ -960,3 +954,712 @@ func lineEnding() string { return "\r\n" }
 @cfg(not(os: "windows"))
 func lineEnding() string { return "\n" }
 ```
+
+## Expressions
+
+An expression denotes a value, computed by applying operators and functions to operands.
+
+### Operands
+
+An operand is a literal, a name (possibly qualified, `strings.Split`), `this` inside a method, `nil`, a
+composite literal, a function literal, or a parenthesized expression. `_` is an operand only on the left
+of an assignment and in patterns.
+
+### Operators and precedence
+
+```ebnf
+expr       ::= try_expr | or_expr
+or_expr    ::= and_expr ("||" and_expr)*
+and_expr   ::= cmp_expr ("&&" cmp_expr)*
+cmp_expr   ::= add_expr (("==" | "!=" | "<" | "<=" | ">" | ">=") add_expr)*
+add_expr   ::= mul_expr (("+" | "-" | "|" | "^") mul_expr)*
+mul_expr   ::= unary_expr (("*" | "/" | "%" | "@" | "<<" | ">>" | "&") unary_expr)*
+unary_expr ::= ("-" | "!" | "&" | "*" | "await") unary_expr | postfix_expr
+```
+
+| Precedence | Operators |
+|---|---|
+| 5 | `*` `/` `%` `@` `<<` `>>` `&` |
+| 4 | `+` `-` `\|` `^` |
+| 3 | `==` `!=` `<` `<=` `>` `>=` |
+| 2 | `&&` |
+| 1 | `\|\|` |
+
+Unary operators bind tighter than binary ones, and postfix forms (selectors, calls, indexing, `?`)
+tighter still. Binary operators of one level associate to the left: `1 + 2 << 1` is `5`, and `5 & 3 == 1`
+is `true`. Comparisons do not chain: `1 < 2 < 3` fails with `mismatched types bool and int for operator <`.
+
+The operands of a binary operator must have identical types, except that an untyped constant takes the
+type of the other operand.
+
+| Operator | Operands |
+|---|---|
+| `+` | numbers; strings (concatenation) |
+| `-` `*` `/` | numbers |
+| `%` | integers only: `operator % is not defined on float` |
+| `&` `\|` `^` `<<` `>>` | integers; `>>` is arithmetic on signed types |
+| `==` `!=` | numbers, `bool`, `char`, strings, pointers (identity), plain enums, `nil` against nilable values |
+| `<` `<=` `>` `>=` | numbers, `char`, strings (bytewise) |
+| `&&` `\|\|` `!` | `bool`; `&&` and `\|\|` short-circuit |
+| unary `-` | numbers |
+| `&x` | the address of a variable, field, element or composite literal |
+| `*p` | the value `p` points to; `nil` panics |
+| `await t` | a `Task`, inside `async` functions only |
+
+**Operator methods.** On struct and enum values an operator calls a method of the left operand:
+
+| Operator | Method |
+|---|---|
+| `a + b`, `a - b`, `a * b`, `a / b`, `a % b`, `a @ b` | `Add`, `Sub`, `Mul`, `Div`, `Rem`, `MatMul`, as `func Add(other U) R` |
+| `-a` | `func Neg() T` |
+| `a[i]`, `a[i] = v` | `func Index(i I) V`, `func IndexSet(i I, v V)` |
+| `a == b`, `a != b` | `func Equals(other T) bool` |
+| `<` `<=` `>` `>=` | `func Compare(other T) int` |
+
+The right operand is checked against the method's parameter type, and the expression has the method's
+result type; a `T!` result makes it fallible. `a op= b` is `a = a op b`. `&&`, `||`,
+`!`, the bitwise operators, `&`, `*` (dereference), `?` and slicing cannot be overloaded. A missing method
+is an error: `operator / is not defined on Money: Money has no method Div`.
+
+```zell
+struct Vec {
+    X float
+    Y float
+    func Add(o Vec) Vec { return Vec{X: this.X + o.X, Y: this.Y + o.Y} }
+    func Mul(k float) Vec { return Vec{X: this.X * k, Y: this.Y * k} }
+}
+
+func mid(a, b Vec) Vec {
+    return (a + b) * 0.5
+}
+```
+
+### Order of evaluation
+
+Operands, call arguments and the elements of composite literals are evaluated left to right: in
+`f() + g() * h()` the calls happen in the order `f`, `g`, `h`. The right-hand side of an assignment is
+evaluated completely before any variable is assigned.
+
+### Selectors
+
+`x.f` denotes the field or method `f` of `x`, through any number of pointer indirections and through
+embedded structs when `f` is promoted. `ns.Name` denotes a member of a namespace. `t.0` denotes a tuple
+element.
+
+### Calls
+
+`f(a, b)` calls the function value `f`. Arguments are assigned to the parameters; a variadic parameter
+receives the remaining arguments in a new slice, or one slice spread with `xs...`. A fallible value cannot
+be an argument; only `t.Must(x)` and `t.MustFail(x)` in tests accept one. Calling a method on a struct
+variable passes its address. Calling a `nil` function value panics.
+
+A call is a valid statement whether or not it has a result, but a `T!` result must be handled. Any other
+expression used as a statement is an error: `expression is evaluated but not used`.
+
+### Method values
+
+`x.M` without a call yields a function bound to `x`; `T.M` yields a function that takes `*T` as its first
+parameter. See [Method declarations](#method-declarations).
+
+### Index expressions
+
+| Expression | Meaning |
+|---|---|
+| `a[i]`, `a` a slice, array or string | element `i`, `0 <= i < len(a)`; out of range panics: `index out of range [5] with length 3` |
+| `m[k]`, `m` a map | the value for `k`, or the zero value if absent |
+| `v, ok = m[k]` | comma-ok lookup |
+| `a[i]`, `a` a struct or enum | its `Index` method |
+
+A string element has type `byte` and cannot be assigned.
+
+### Slice expressions
+
+`a[lo..hi]` on a slice, array or string yields the elements `lo` through `hi - 1`. `lo` defaults to 0 and
+`hi` to `len(a)`. The result shares the storage of `a`. Bounds outside the storage panic:
+`slice bounds out of range [1:4] with capacity 3`.
+
+### Composite literals
+
+| Literal | Type |
+|---|---|
+| `Point{X: 1, Y: 2}` | struct; omitted fields take their default or zero value |
+| `Pair<int, string>{First: 1, Second: "a"}` | an instance of a generic struct |
+| `[1, 2, 3]` | slice; element type from the elements or the expected type |
+| `[1, 2, 3]` where `[3]int` is expected | array |
+| `map[string]int{"a": 1}` | map |
+| `Ints{1, 2}`, `Inventory{"apple": 3}` | slice and map through a type alias |
+| `(1, "a")` | tuple |
+
+Struct fields are given only by name: `P{1, 2}` fails with `a literal of struct type P takes
+Field: value pairs`. Element types are never elided: `[{X: 1}]` is a syntax error; write `[Point{X: 1}]`.
+A struct literal directly in the header of `if`, `for` or `switch` must be parenthesized.
+
+`new T` allocates a zero `T` and yields `*T`; `new T{…}` and `&T{…}` allocate the literal.
+
+### Function literals
+
+```ebnf
+lambda_expr ::= ASYNC? FUNC LPAREN param_list? RPAREN type? block
+              | ASYNC? LPAREN (param_list | lambda_names)? RPAREN ARROW (block | expr)
+              | ASYNC? IDENTIFIER ARROW (block | expr)
+```
+
+A function literal is a closure: it captures the variables of the enclosing function by reference and
+keeps them alive. The short forms `(x int) => x * 2` and `x => x * 2` return their expression. Parameter
+types may be omitted when the expected type is a function type; otherwise the error is
+`cannot infer the type of lambda parameter u`. A block literal without a declared result takes the
+expected result type, or returns nothing. An `async` literal returns a `Task` when called. `?` inside a
+literal belongs to the literal, not to the enclosing function.
+
+```zell
+func apply(xs []int, f func(int) int) []int {
+    var out []int
+    for x in xs {
+        out = append(out, f(x))
+    }
+    return out
+}
+
+func shifted() []int {
+    var k = 10
+    return apply([1, 2], x => x + k)
+}
+```
+
+### Conversions
+
+`T(x)` converts `x` to `T`:
+
+| From | To | Result |
+|---|---|---|
+| a numeric type | a numeric type | integers wrap to the target size; floats truncate toward zero |
+| an integer | `char` | the low 32 bits |
+| `char` | `string` | the UTF-8 encoding of the code point |
+| a plain enum | `int` | the variant index |
+| a value | an interface it implements | an interface value |
+
+Byte slices and code points convert with `strings.Bytes`, `strings.FromBytes`, `strings.Runes` and
+`strings.FromRunes`. There are no type assertions such as `x.(T)`; use a type switch.
+
+### The ? operator
+
+`e?` requires `e` of type `T!`. If `e` holds a value, the result is that value. If it holds an error, the
+enclosing function returns it, or, inside a block `try`, control passes to the `catch`. `e?(msg)` first
+wraps the error with the string `msg`: the message becomes `msg: original`, and the original stays in
+the chain. Elsewhere `?` is an error: `? outside of fallible function: main does not return a T! type`.
+
+### Try expressions
+
+```ebnf
+try_expr   ::= TRY expr (CATCH var_name block | ELSE else_value)
+else_value ::= CONTINUE | BREAK | return_stmt | expr
+```
+
+`try e catch err { … }` evaluates the fallible `e`. On success the result is its value; on error `err` is
+bound and the block runs. When the value of the `try` is used, the block must leave the enclosing block
+with `return`, `break`, `continue` or `panic`: `catch block must return (or break, continue, panic) when
+the value of try is used`. Used as a statement, the block may fall through.
+
+`try e else v` yields `v` on error and drops the error. `v` may also be `continue`, `break` or a `return`
+statement, which then runs on error. `try` on a non-fallible expression is an error:
+`try requires a fallible (T!) expression`.
+
+```zell
+func port(s string) int {
+    var n = try strings.ToInt(s) else return 8080
+    return n
+}
+```
+
+## Statements
+
+```ebnf
+statement ::= labeled_stmt | var_decl | const_decl | if_stmt | for_stmt | switch_stmt | try_stmt
+            | return_stmt | break_stmt | continue_stmt | defer_stmt | block | assign_stmt | expr_stmt
+```
+
+### Assignments
+
+```ebnf
+assign_stmt ::= expr (COMMA expr)* assign_op expr (COMMA expr)*
+assign_op   ::= "=" | "+=" | "-=" | "*=" | "/=" | "%=" | "@=" | "&=" | "|=" | "^=" | "<<=" | ">>="
+```
+
+The left side is a variable, field, element, dereference or `_`. `a, b = b, a` evaluates every
+right-hand value before assigning. `(q, r) = f()` assigns the elements of a tuple; `_` drops one.
+`v, ok = m[k]` is the comma-ok form. `x op= y` is `x = x op y`. `_ = e` evaluates `e` and discards it,
+including the error of a `T!`. There are no `++` and `--` statements.
+
+### If statements
+
+```ebnf
+if_stmt ::= IF expr block (ELSE (if_stmt | block))?
+```
+
+The condition has type `bool`. There is no init statement, and `if` is not an expression.
+
+### For statements
+
+```ebnf
+for_stmt   ::= FOR for_header? block
+for_header ::= for_in | expr
+for_in     ::= var_name (COMMA var_name)? "in" (range_expr | expr)
+```
+
+| Form | Iterates |
+|---|---|
+| `for { }` | forever |
+| `for cond { }` | while `cond` is true, tested before each iteration |
+| `for i in a..b { }` | `i = a, a+1, …, b-1`; empty if `b <= a`; `a` and `b` are evaluated once |
+| `for x in s`, `for i, x in s` | the elements of a slice or array, with the index |
+| `for ch in str`, `for i, ch in str` | the code points of a string, with the byte offset |
+| `for k in m`, `for k, v in m` | the keys, or keys and values, of a map, in unspecified order |
+| `for x in v` | a value that follows the iteration protocol below |
+| `for v in ch` | the values of a `task.Channel` until it is closed and empty; `async` only |
+
+Each iteration has its own copy of the loop variables, so a closure created in one iteration keeps that
+iteration's values. Assigning to a loop variable does not change the collection; assign through the
+index (`xs[i] = …`). A loop variable that is not used must be `_`.
+
+<Callout type="note">
+Per-iteration loop variables are what 0.1.5 does; the design does not state it. It matches Go 1.22 and
+later.
+</Callout>
+
+**Iteration protocol.** For `for x in v` over any other type:
+
+1. if `v` has `func Iter() It`, the loop calls it once and iterates the result;
+2. else, if `v` has a `Next` method, `v` is the iterator;
+3. else, if `v` has `func Items() []T`, the loop iterates that slice.
+
+`Next` has one of the forms `func Next() (T, bool)` (`false` ends the loop), `func Next() (K, V, bool)`
+(two loop variables), or `func Next() *T` (`nil` ends the loop). An `async func Next()` is awaited on each
+step and needs an `async` function.
+
+```zell
+struct Countdown {
+    From int
+    func Iter() countIter { return countIter{n: this.From} }
+}
+
+struct countIter {
+    n int
+    func Next() (int, bool) {
+        if this.n == 0 {
+            return (0, false)
+        }
+        this.n -= 1
+        return (this.n + 1, true)
+    }
+}
+
+func total() int {
+    var sum = 0
+    for x in (Countdown{From: 3}) {
+        sum += x
+    }
+    return sum
+}
+```
+
+### Switch statements
+
+```ebnf
+switch_stmt ::= SWITCH expr? LBRACE switch_case* default_case? RBRACE
+switch_case ::= CASE pattern (COMMA pattern)* COLON statement*
+pattern     ::= range_expr | type IDENTIFIER | expr
+```
+
+Cases are tried in order and the first match runs; there is no fallthrough. A case may list several
+patterns:
+
+| Pattern | Matches when |
+|---|---|
+| an expression | it equals the subject |
+| `a..b` | `a <= subject < b` |
+| a `bool` condition such as `n > 100` | it is true |
+| `T x` | the dynamic type of an interface, `any` or `error` subject is `T` (exactly, for a struct or pointer type; implements `T`, for an interface); `x` is bound to it |
+| `E.V(a, _)` | the enum subject is variant `V`; its fields are bound, or skipped with `_` |
+
+Without a subject, `switch { case cond: … }` runs the first case whose condition is true. Duplicate
+constant cases are an error: `duplicate case in switch`. If nothing matches and there is no `default`,
+nothing happens. `break` inside a case leaves the `switch`; `continue` continues the enclosing loop.
+
+A type switch over an `error` tests the error itself, not its wrappers; use `errors.As` for the chain. A
+type switch over a sealed interface without `default` must list every implementation.
+
+### Labeled statements
+
+```ebnf
+labeled_stmt ::= IDENTIFIER COLON (for_stmt | switch_stmt)
+```
+
+A label names a `for` or a `switch`. `break L` leaves the labeled statement; `continue L` starts the next
+iteration of the labeled loop. The label follows `break` or `continue` on the same line. Errors include
+`label L defined and not used` and `invalid continue label sw: it labels a switch, not a loop`. Leaving
+blocks through a label releases their values as a plain `break` does.
+
+### Return statements
+
+`return` ends a function with no result. `return e` returns `e`; `return a, b` and `return (a, b)` return
+a tuple. In a `T!` function `return` accepts a `T` or an `error`. Deferred calls run after the result is
+evaluated and before the function's locals are released.
+
+### Terminating statements
+
+A function with a result must end in a terminating statement, otherwise the error is
+`missing return at end of function f returning int`. These are terminating:
+
+- `return` and `panic(…)`;
+- a block whose last statement is terminating;
+- an `if` with an `else`, both of whose branches are terminating;
+- a `for` without a condition and without a `break` that refers to it;
+- a `switch` with a `default`, every case of which is terminating, and with no `break` to it;
+- a `switch` over an enum that lists every variant without `default`, or a type switch over a sealed
+  interface that lists every implementation, with every case terminating; if nothing matches at run time,
+  the program panics;
+- `reflect.Error(…)`.
+
+### Defer statements
+
+`defer f(args)` schedules a call to run when the surrounding function returns, on every path: the end of
+the body, `return`, `?`, or leaving through a label. The function value, receiver and arguments are
+evaluated at the `defer`; the call happens later. Deferred calls run in reverse order. Deferring a call
+with a `T!` result is an error; handle the error in a deferred closure:
+
+```zell
+func save() void! {
+    return error("disk full")
+}
+
+func run() {
+    defer func() {
+        try save() catch err { println("save failed:", err) }
+    }()
+}
+```
+
+A `defer` inside a loop runs at function exit, not per iteration (lint `L0008`).
+
+`defer await f(args)` is allowed only in an `async` function: `defer await outside async function`. Its
+receiver and arguments are evaluated at once and the call is awaited at function exit, in the same LIFO
+order as other defers; the result is discarded, and a `T!` result is an error. It cannot be inside a loop,
+a function with one may have at most eight defers, and the awaited expression must be a call. When a task
+unwinds from a panic, deferred awaits are skipped.
+
+### Try statements
+
+```ebnf
+try_stmt ::= TRY block CATCH var_name block
+```
+
+Inside the block, `?` passes control to the `catch` instead of returning. The `catch` block may fall
+through; execution then continues after the statement. Variables of the block are not visible outside
+it. Blocks nest and `?` goes to the innermost `catch`; `?` inside the `catch` block or inside a function
+literal does not belong to this `try`. A block `try` makes `?` usable in any function. On the jump to the
+`catch`, the block's values are released; the function's defers do not run.
+
+## Errors
+
+The predeclared interface `error` has the method `func Message() string`, and any type with that method
+is an error. `error(msg)` creates one. A struct error carries data and is recognized with a type switch.
+A constant `const ErrX = error("…")` is a sentinel.
+
+The namespace `errors` works on chains of wrapped errors:
+
+| Function | Meaning |
+|---|---|
+| `errors.New(msg)` | the same as `error(msg)` |
+| `errors.Wrap(err, msg)` | a new error with message `msg: <message of err>` and cause `err` |
+| `errors.Unwrap(err)` | the cause, or `nil` |
+| `errors.Is(err, target)` | `target` is `err` or in its chain |
+| `errors.As(err, &v)` | an error of `v`'s type is in the chain; it is copied into `v` |
+
+`?(msg)` wraps like `errors.Wrap`. A user error with `func Unwrap() error` is a link of the chain; its
+message is only its own `Message()`.
+
+```zell
+const ErrEmpty = error("empty input")
+
+struct NotFound {
+    Key string
+    func Message() string { return "not found: " + this.Key }
+}
+
+func lookup(key string) int! {
+    if key == "" {
+        return ErrEmpty
+    }
+    return NotFound{Key: key}
+}
+
+func describe(key string) string {
+    var n = try lookup(key) catch err {
+        switch err {
+            case NotFound nf: return "missing " + nf.Key
+            default: return "error: " + err.Message()
+        }
+    }
+    return fmt.Format("{0}", n)
+}
+```
+
+**Return traces.** Every error records where it was created (`error(…)`, a struct converted to `error`,
+`errors.Wrap`, a failing standard-library call, or the `return` of an error with no location yet) and
+each `?` it passed through, at the cost of one pointer per step and without unwinding the stack.
+`errors.Trace(err)` returns the trace as text:
+
+```text
+  created at   app/fs.zl:42      Open
+  returned via app/config.zl:17  ReadConfig  ?("config")
+  returned via app/main.zl:9     main
+```
+
+`errors.Frames(err)` returns the steps as `errors.Frame{File, Line, Func, Context}`. Frames inside the
+standard library are not recorded. `println(err)` prints only the message. With `--no-error-trace`
+nothing is recorded and `errors.Trace` returns `""`.
+
+## Memory
+
+Zell has no tracing garbage collector. Memory is managed by reference counting with deterministic
+destruction. These are the rules a program can observe.
+
+**Values and references.** Numbers, `bool`, `char`, structs, arrays, tuples and enums are values:
+assignment and parameter passing copy them. Strings, slices, maps, closures, interface boxes, errors and
+objects created with `new` are heap objects with a reference count; copying a reference shares the
+object.
+
+**Release.** An object is freed when its last strong reference goes away: at the end of the block of the
+variable that holds it, on reassignment, and on every exit path (`return`, `break`, `continue`, `?`,
+`try … else`). Top-level variables are released after `main` returns, in reverse order of
+initialization.
+
+**Destructors.** A method `func Drop()` (no parameters, no result, not static) is the struct's
+destructor. It runs exactly once when the value goes away: for a heap object when its last reference
+goes, for a local value at the end of its block. A block's variables are dropped in reverse order of
+declaration, on every loop iteration and every exit path; at `return`, deferred calls run first. A
+struct's own `Drop` runs before its fields are dropped, and fields are dropped in declaration order.
+
+```zell
+struct File {
+    Name string
+    func Drop() { println("close", this.Name) }
+}
+
+func open() {
+    var a = File{Name: "a"}
+    var b = File{Name: "b"}
+    println(a.Name, b.Name)
+}
+```
+
+Calling `open()` prints `a b`, then `close b`, then `close a`.
+
+A value with a destructor, or containing one by value, is move-only: it is created in place and passed
+by value to transfer ownership. Copying it from a variable, field or element is an error:
+`cannot copy a value of type F: it has a destructor (Drop), so it is move-only`. It cannot be stored in
+a slice, map, tuple, enum payload or `async` result
+(`a value with a destructor (Drop) cannot be stored as a slice of F`); share it through a pointer.
+`Drop` cannot be called explicitly.
+
+**Interior pointers.** `&s.f`, `&a[i]` and `&global` point into an object. Such a pointer may be
+dereferenced, compared, passed to a parameter that does not keep it, and held in a local variable, which
+then keeps the owner alive. Storing it in a field, element, map, closure, interface or `weak`, or
+returning it, is an error: `cannot keep an interior pointer`.
+
+**Cycles.** Objects that refer to each other in a cycle are not freed by reference counting. Break such
+links with `weak *T`. The compiler warns (`W0001`) about types whose values can form a cycle, and a
+bounded cycle collector frees cycles among values of those types; `ZELL_CYCLES=off` disables it.
+`zell run --leak-check` reports objects alive at exit and exits with status 66.
+
+**Data races.** Writing memory shared between tasks without synchronization is undefined.
+
+## Concurrency
+
+### Async functions
+
+`async func f(…) T` declares an async function; calling it yields a `Task<T>`. `await t` suspends the
+current async function until `t` completes and yields its result. `await` is allowed only in `async`
+functions, methods and literals. `await f()?` awaits a `Task<T!>` and passes its error up.
+
+The body of an async function runs synchronously in the caller until its first real suspension, so a
+call that never suspends costs as much as an ordinary call. After a suspension the body continues as a
+task on the runtime's thread pool (`ZELL_WORKERS` threads, by default one per CPU); tasks switch only at
+`await`. `main` may be `async func main()` or `async func main() void!`.
+
+### Tasks
+
+| Name | Meaning |
+|---|---|
+| `task.All(a, b, …)` | a task of the tuple of results; `task.All(ts)` over `[]Task<T>` gives `[]T`; the first error or panic cancels the rest |
+| `task.Any(a, b, …)` | the result of the first task to finish; the others are cancelled |
+| `task.Delay(ms)`, `task.Yield()` | sleep; give up the thread |
+| `task.Spawn(f)`, `task.Go(f)` | run `f` as a separate task; `Go` takes a `func() Task<void>` and is not awaited |
+| `task.Timeout(t, ms)` | `true` if `t` finished within `ms` milliseconds |
+| `task.Channel<T>(n)` | a channel with buffer `n`, 0 for unbuffered: `Send(v)`, `Recv() T!`, `Close()`, `Len()`, `Cap()`, `IsClosed()` |
+| `task.Mutex` | `Lock()` (awaited), `TryLock()`, `Unlock()`; the zero value is unlocked |
+| `task.WaitGroup` | `Add(n)`, `Done()`, `Wait()`; the zero value is ready |
+
+`Recv` on a closed, empty channel fails; `Send` on a closed channel panics. Copies of a channel share it.
+
+```zell
+async func produce(ch task.Channel<int>) {
+    for i in 0..3 {
+        await ch.Send(i)
+    }
+    ch.Close()
+}
+
+async func consume() int {
+    var ch = task.Channel<int>(0)
+    task.Go(() => produce(ch))
+    var sum = 0
+    for v in ch {
+        sum += v
+    }
+    return sum
+}
+```
+
+<Callout type="note">
+**Not yet implemented.** In 0.1.5, `task.Spawn` and `task.SpawnWith` reject a function that returns a
+`Task<T!>`: `task.Spawn(async func() int! { return 1 })` fails with `result of type int! must be handled`
+`… in instantiation of Spawn<int!>`, reported at the end of the calling file.
+</Callout>
+
+### Cancellation
+
+Cancellation is cooperative and belongs to the task's context, which child tasks inherit. A cancelled
+`await` of a fallible operation (`Recv`, network I/O) returns `task.ErrCancelled`; `Delay` and `Send`
+return at once, and `task.CheckCancelled() void!` reports the cancellation.
+
+| Name | Meaning |
+|---|---|
+| `task.WithTimeout(ms, f)` | runs `f` with a deadline `ms` milliseconds away |
+| `task.NewCancel()` | a handle with `Context` and `Cancel()` |
+| `task.SpawnWith(ctx, f)`, `task.RunWith(ctx, f)` | run `f` in a given context |
+| `t.Cancel()` | cancels task `t` and its descendants |
+| `task.IsCancelled()` | whether the current task is cancelled |
+
+```zell
+async func slow() int! {
+    await task.Delay(10000)
+    task.CheckCancelled()?
+    return 1
+}
+
+async func bounded() int {
+    return try await task.WithTimeout(20, slow) else -1
+}
+```
+
+<Callout type="note">
+**Not yet implemented.** The design's `task.Scope` (a structured group of child tasks), `task.OnCancel`
+and `task.WithDeadline` are not in 0.1.5.
+</Callout>
+
+### Task-local values
+
+`task.Key<T>()` creates a typed key, declared with `var` because a call is not a constant.
+`task.With(key, value, f)` sets the value while `f` runs, including the tasks it starts; `task.Get(key)`
+returns `*T`, or `nil` when the value is not set. Values set inside an async function are not visible to
+its caller afterwards.
+
+### Panics in tasks
+
+A panic ends the task it happens in, after that task's deferred calls run and its values are released.
+Awaiting a `Task<T!>` whose task panicked yields an error with `task.ErrPanic` in its chain;
+`task.PanicMessage(err)` returns the message. Awaiting a `Task<T>` panics again with
+`panic in awaited task: …`. A panic in a task that nobody awaits is printed when the task is released, and
+the process continues.
+
+## Compile-time reflection
+
+`reflect.TypeOf<T>()` and the predeclared `typeof(x)` return the `*reflect.TypeInfo` of a type. There is
+one per type, so `==` compares types; `typeof` of an interface value gives its dynamic type. The run-time
+API (`Fields`, `Methods`, `Attribute<A>()`, `reflect.ValueOf`, `Call`) is part of the standard library.
+
+Inside a generic function, `for f in reflect.Fields<T>()` is an instruction rather than a call: the body
+is checked and generated once per field of the struct `T`. In each copy:
+
+- `f.Name`, `f.Index`, `f.Exported`, `f.Embedded`, `f.Attribute<A>()` and `f.Type.Kind` are constants;
+- `f.Get(v)` is the field access `v.Field`, with the field's static type;
+- `f.Set(p, x)` assigns the field of `*p`, converting `x` to the field's type.
+
+An `if` whose condition is built from such constants, from `reflect.TypeOf<T>().Kind`, or from
+`reflect.TypeOf<A>() == reflect.TypeOf<B>()` is static: only the chosen branch is checked and generated.
+A `switch` on a field value whose cases are all type patterns is static as well. `reflect.Error(msg)` is a
+compile error raised only where it is reachable after this folding, a library's `static_assert`.
+
+```zell
+func NameOf<T>() string {
+    if reflect.TypeOf<T>().Kind == reflect.Kind.Struct {
+        return reflect.TypeOf<T>().Name
+    }
+    reflect.Error("NameOf needs a struct")
+}
+
+func sumInts<T>(v T) int {
+    var n = 0
+    for f in reflect.Fields<T>() {
+        if f.Type.Kind == reflect.Kind.Int {
+            n += f.Get(v)
+        }
+    }
+    return n
+}
+```
+
+`NameOf<int>()` fails to compile with `NameOf needs a struct` and the note `raised by NameOf<int>`.
+`reflect.Fields<T>()` used anywhere but as the sequence of such a loop fails with
+`reflect.Fields<T>() can only be the sequence of a for loop in a generic function`.
+
+`reflect.TypesWith<A>()` returns every type of the whole program declared with attribute `A`, in a stable
+order (package, file, declaration). A `for` over it whose body uses the descriptor as a type is unrolled
+per type, and `for m in t.Methods` and `for p in m.Params` unroll inside it.
+
+## Program initialization and execution
+
+A program consists of the namespaces of its files and of its dependencies. Execution starts with the
+function `main` of the entry namespace, which takes no parameters and returns nothing or `void!`; it may
+be `async`. There are no `init` functions: a function named `init` is an ordinary function and is not
+called.
+
+Top-level variables are initialized before `main` in dependency order: `var a = b + 1` followed by
+`var b = 2` gives `a == 3`.
+
+The program ends when `main` returns:
+
+| Outcome | Exit status |
+|---|---|
+| `main` returns normally | 0 |
+| `os.Exit(n)` | `n` |
+| `main` returns an error | 1; `error: <message>` and the trace go to stderr |
+| a panic in `main` or in synchronous code outside tasks | 2 |
+| a fatal signal: bad memory access, stack overflow | 2 |
+| `--leak-check` finds live objects | 66 |
+
+### Panics
+
+A panic signals a programmer error: `panic(msg)`, dereferencing `nil`, an index or slice out of range,
+integer division by zero, an exhaustive `switch` that matches nothing, running out of memory. There is no
+`recover`, and a panic cannot be caught. A panic ends its task (see [Panics in tasks](#panics-in-tasks));
+in `main` it ends the process. Deferred calls run and values are released, frame by frame, on the way
+out. A panic inside a `defer` or `Drop` during this unwinding ends the process.
+
+The message goes to stderr with a backtrace of `file:line function` frames:
+
+```text
+panic: runtime error: index out of range [5] with length 3
+
+backtrace (most recent call first):
+  examples/bounds.zl:6 inner
+  examples/bounds.zl:10 main
+```
+
+`ZELL_NO_BACKTRACE=1` prints only the first line. A fatal signal is not a panic: deferred calls do not
+run, and the runtime prints `fatal error: unexpected signal …` with a backtrace and exits with status 2.
+
+## Next
+
+[The standard library](/docs/reference/stdlib): every namespace and function.

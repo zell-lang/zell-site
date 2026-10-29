@@ -1,0 +1,54 @@
+The `time` namespace follows Go's `time` package: a `Duration`, a `Time` with a location, layouts
+written with the reference date `Mon Jan 2 15:04:05 2006`, and tickers and timers for async code. The
+examples use fixed dates so their output never changes.
+
+<Callout type="go">
+A few names differ from Go because older integer-millisecond functions took them: `time.Current()` is
+`time.Now()`, `time.Elapsed(t)` is `time.Since(t)`, `time.ParseTime` is `time.Parse`, and durations are
+built with `time.Seconds(n)`, `time.Minutes(n)` and so on rather than `n * time.Second`.
+</Callout>
+
+## Durations
+
+<Example id="examples/time/durations" />
+
+## Dates and calendar parts
+
+`time.Date` builds a moment from its parts; a `nil` location means UTC.
+
+<Example id="examples/time/dates" />
+
+## Formatting
+
+<Example id="examples/time/formatting" />
+
+## Parsing
+
+`time.ParseTime` returns `Time!`. A value with an offset keeps it; `UTC()` converts.
+
+<Example id="examples/time/parsing" />
+
+## Time arithmetic
+
+<Example id="examples/time/arithmetic" />
+
+## Time zones
+
+`time.FixedZone` needs no time-zone database. `time.LoadLocation("Europe/Oslo")` reads the system's
+database instead.
+
+<Example id="examples/time/zones" />
+
+## Measuring elapsed time
+
+<Example id="examples/time/measure" />
+
+## Tickers and timers
+
+These are for `async` code: `await tk.Tick()` waits for the next tick without blocking a thread.
+
+<Example id="examples/time/ticker" />
+
+## Next
+
+[Tasks](/docs/examples/tasks): running work concurrently and waiting for it.

@@ -1,0 +1,42 @@
+namespace status
+
+import io
+import net
+
+// fetch turns statuses outside 2xx into errors.
+async func fetch(base string, path string) string! {
+    var res = await http.Get(base + path)?
+    if res.Status < 200 || res.Status > 299 {
+        return error(fmt.Format("GET {0}: {1} {2}", path, res.Status, http.StatusText(res.Status)))
+    }
+    return res.Body
+}
+
+async func main() void! {
+    var r = http.NewRouter()
+    r.Get("/ok/{n}", async func(req *http.Request, res *http.Response) void! {
+        res.Text(200, "page " + req.Param("n"))
+    })
+    r.Get("/broken", async func(req *http.Request, res *http.Response) void! {
+        res.Text(503, "maintenance")
+    })
+    var srv = http.Server{Addr: "127.0.0.1:0", Handler: r}
+    srv.Listen()?
+    var serving = srv.Serve()
+
+    for path in ["/ok/1", "/broken", "/ok/22"] {
+        var body = try await fetch(srv.URL(), path) catch err {
+            println("error:", err)
+            continue
+        }
+        println(body)
+    }
+
+    // A refused connection is an error from http.Get itself.
+    var port = srv.Port()
+    await srv.Shutdown()
+    await serving?
+    try await http.Get(fmt.Format("http://127.0.0.1:{0}/", port)) catch _ {
+        println("after shutdown: request failed")
+    }
+}

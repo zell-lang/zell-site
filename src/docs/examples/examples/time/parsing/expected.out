@@ -1,0 +1,5 @@
+2026-10-30 14:00:00
+2026-10-30 11:00:00
+error: time: parsing time "30 Oct 2026" as "2006-01-02T15:04:05Z07:00": bad year
+error: time: parsing time "2026-13-01T00:00:00Z" as "2006-01-02T15:04:05Z07:00": month out of range
+2026-10-30 Friday

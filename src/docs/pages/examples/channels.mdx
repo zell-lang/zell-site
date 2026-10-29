@@ -1,0 +1,46 @@
+A `task.Channel<T>(n)` passes values between tasks in FIFO order, with room for `n` values (`0`:
+unbuffered). [Async and concurrency](/docs/learn/async#channels) covers the rules. Where several
+tasks send to one channel, these programs sort what they receive, because the arrival order depends on
+scheduling.
+
+## Buffered channels and closing
+
+<Example id="examples/channels/buffered" />
+
+## Receiving until closed
+
+`for v in ch` is the short form. `Next()` returns `(value, ok)` when you need to stop on some other
+condition too.
+
+<Example id="examples/channels/next" />
+
+## Worker pool
+
+<Example id="examples/channels/workers" />
+
+## Pipeline
+
+<Example id="examples/channels/pipeline" />
+
+## Receive with a timeout
+
+<Example id="examples/channels/timeout" />
+
+<Callout type="go">
+Zell has no `select` statement. `task.Any` over a `Recv` and a `Delay` (or over several `Recv`s) takes
+the first one to finish and cancels the others; a cancelled `Recv` does not consume a value.
+</Callout>
+
+## Fan-in
+
+Several senders share one channel; a `WaitGroup` tells when to close it.
+
+<Example id="examples/channels/fanin" />
+
+## Broadcast by closing
+
+<Example id="examples/channels/broadcast" />
+
+## Next
+
+[HTTP client](/docs/examples/http-client): requests, headers, JSON bodies and timeouts.

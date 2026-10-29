@@ -1,0 +1,27 @@
+namespace project
+
+import io
+
+func main() void! {
+    var root = fs.Join(fs.TempDir(), "zell-dirs-" + strconv.Itoa(os.Pid()))
+    defer func() { _ = fs.RemoveAll(root) }()
+
+    // MkdirAll creates missing parents too.
+    fs.MkdirAll(fs.Join(root, "src/util"))?
+    io.WriteFile(fs.Join(root, "zell.toml"), "[package]\n")?
+    io.WriteFile(fs.Join(root, "src/main.zl"), "")?
+
+    // fs.ReadDir returns sorted names; os.ReadDir returns entries.
+    println(fs.ReadDir(root)?)
+    for e in os.ReadDir(fs.Join(root, "src"))? {
+        var kind = "file"
+        if e.IsDir {
+            kind = "dir"
+        }
+        println(e.Name, kind)
+    }
+
+    // Remove deletes a file or an empty directory.
+    fs.Remove(fs.Join(root, "src/util"))?
+    println(fs.IsDir(fs.Join(root, "src")), fs.Exists(fs.Join(root, "src/util")))
+}

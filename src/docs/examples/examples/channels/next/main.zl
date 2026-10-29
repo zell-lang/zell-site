@@ -1,0 +1,30 @@
+namespace sensor
+
+import io
+
+async func produce(out task.Channel<int>) {
+    for v in [21, 22, 24, 23] {
+        await out.Send(v)
+    }
+    out.Close()
+}
+
+async func main() {
+    // Unbuffered: every Send waits until the receiver takes the value.
+    var readings = task.Channel<int>(0)
+    var p = produce(readings)
+
+    // Next returns the value and false once the channel is closed and empty.
+    var sum = 0
+    var n = 0
+    for {
+        var (v, ok) = await readings.Next()
+        if !ok {
+            break
+        }
+        sum += v
+        n += 1
+    }
+    await p
+    println(n, "readings, average", float(sum) / float(n))
+}

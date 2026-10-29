@@ -1,0 +1,27 @@
+namespace items
+
+import io
+import net
+
+async func main() void! {
+    var r = http.NewRouter()
+    r.Handle("*", "/items/{id}", async func(req *http.Request, res *http.Response) void! {
+        res.Text(200, fmt.Format("{0} item {1}, body \"{2}\", token {3}",
+            req.Method, req.Param("id"), req.Body, req.Header("Authorization")))
+    })
+    var srv = http.Server{Addr: "127.0.0.1:0", Handler: r}
+    srv.Listen()?
+    var serving = srv.Serve()
+
+    // A Client sends its Headers with every request and reuses connections.
+    var client = http.Client{Headers: map[string]string{"Authorization": "Bearer t0k3n"}}
+    var put = await client.Do("PUT", srv.URL() + "/items/3", "blue", nil)?
+    println(put.Body)
+    var del = await client.Do("DELETE", srv.URL() + "/items/3", "", nil)?
+    println(del.Body)
+    var post = await client.Post(srv.URL() + "/items/4", "name=lamp", "application/x-www-form-urlencoded")?
+    println(post.Body)
+
+    await srv.Shutdown()
+    await serving?
+}

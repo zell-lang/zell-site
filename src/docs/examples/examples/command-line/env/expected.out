@@ -1,0 +1,4 @@
+mode: staging
+port: 8080
+port + 1: 8081
+in Environ: true

@@ -1,0 +1,6 @@
+intro.md |.md|
+archive.tar.gz |.gz|
+Makefile ||
+src ||
+report.html
+app.log logs

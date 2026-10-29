@@ -1,0 +1,4 @@
+200 user 7, post 42
+200 file css/site.css
+200 search "red shoes" limit 5
+404 404 Not Found

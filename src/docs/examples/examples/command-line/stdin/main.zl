@@ -1,0 +1,15 @@
+namespace wc
+
+import io
+
+func main() void! {
+    // ReadAll reads standard input to the end ("" when there is none).
+    var text = io.ReadAll()?
+    var lines = 0
+    for line in strings.Split(text, "\n") {
+        if line != "" {
+            lines += 1
+        }
+    }
+    println(lines, "lines", len(strings.Fields(text)), "words", len(text), "bytes")
+}

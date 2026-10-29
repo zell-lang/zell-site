@@ -1,0 +1,21 @@
+namespace measure
+
+import io
+
+func work() int {
+    var sum = 0
+    for i in 0..1000000 {
+        sum += i % 7
+    }
+    return sum
+}
+
+func main() {
+    // Elapsed(start) is Current().Sub(start).
+    var start = time.Current()
+    var result = work()
+    var took = time.Elapsed(start)
+
+    // Timing varies from run to run: compare it instead of printing it.
+    println(result, took < time.Seconds(5), took >= time.Nanoseconds(0))
+}

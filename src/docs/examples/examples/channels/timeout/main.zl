@@ -1,0 +1,35 @@
+namespace polling
+
+import io
+
+async func recv(ch task.Channel<string>) string {
+    return try await ch.Recv() else "closed"
+}
+
+async func timer(ms int) string {
+    await task.Delay(ms)
+    return "timeout"
+}
+
+// Zell has no select statement: task.Any takes the first of several waits
+// and cancels the rest.
+async func recvOrTimeout(ch task.Channel<string>, ms int) string {
+    return await task.Any(recv(ch), timer(ms))
+}
+
+async func later(ch task.Channel<string>, ms int, msg string) {
+    await task.Delay(ms)
+    await ch.Send(msg)
+}
+
+async func main() {
+    var ch = task.Channel<string>(1)
+    println(await recvOrTimeout(ch, 10))
+
+    var s = later(ch, 5, "hello")
+    println(await recvOrTimeout(ch, 2000))
+    await s
+
+    ch.Close()
+    println(await recvOrTimeout(ch, 2000))
+}

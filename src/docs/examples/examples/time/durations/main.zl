@@ -1,0 +1,21 @@
+namespace durations
+
+import io
+
+func main() void! {
+    var d = time.Hours(1).Add(time.Minutes(30))
+    println(d, d.Minutes(), d.Seconds())
+
+    // Durations print like Go's: 1h30m0s, 250ms, 2.5s.
+    println(time.Milliseconds(250), time.Milliseconds(2500), time.Seconds(90))
+    println(time.Seconds(45).Mul(4), time.Hours(1).Div(3))
+
+    // Parse Go duration text.
+    var timeout = time.ParseDuration("1m30s")?
+    println(timeout, timeout.Milliseconds(), "ms")
+    println(time.ParseDuration("-1.5h")?, time.ParseDuration("300ms")?.Nanoseconds())
+
+    // Durations compare with < and ==.
+    println(timeout > time.Minutes(1), timeout == time.Seconds(90))
+    println(time.Milliseconds(1234).Round(time.Seconds(1)), time.Minutes(95).Truncate(time.Hours(1)))
+}

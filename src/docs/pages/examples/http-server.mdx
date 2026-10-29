@@ -1,0 +1,52 @@
+An `http.Server` serves a `Handler`, usually an `http.Router`. Every connection is a task, and a
+handler is an `async` function that fills in the response. To keep the output reproducible, each
+program sends a few requests to its own server and then shuts it down; a real service would just
+`await srv.Serve()?`.
+
+## Hello, server
+
+The router answers unknown paths with 404 and wrong methods with 405.
+
+<Example id="examples/http-server/hello" />
+
+## Path and query parameters
+
+<Example id="examples/http-server/params" />
+
+## A JSON API
+
+Handlers run concurrently, so shared state needs a `task.Mutex`.
+
+<Example id="examples/http-server/json" />
+
+## Middleware
+
+A middleware is a `func(http.Handler) http.Handler`; `r.Use` wraps every route, outermost first. The
+standard library has `http.Logging`, `http.Recover`, `http.CORS`, `http.Gzip` and others.
+
+<Example id="examples/http-server/middleware" />
+
+## Errors and status codes
+
+Answer client mistakes with a 4xx yourself. An error returned from the handler becomes a 500.
+
+<Example id="examples/http-server/errors" />
+
+<Callout type="warning">
+In 0.1.5 the 500 response body includes the error message. Do not let internal details, such as
+database errors, reach a handler's return in a public service: log them and send a generic message.
+</Callout>
+
+## Forms, cookies and redirects
+
+<Example id="examples/http-server/forms" />
+
+## Calling handlers without a network
+
+`net.http.test` serves a request straight into a recorder. Use it in tests.
+
+<Example id="examples/http-server/recorder" />
+
+## Next
+
+[Command-line programs](/docs/examples/command-line): arguments, flags, environment and exit codes.

@@ -1,0 +1,29 @@
+namespace slow
+
+import io
+import net
+
+async func main() void! {
+    var r = http.NewRouter()
+    r.Get("/slow", async func(req *http.Request, res *http.Response) void! {
+        await task.Delay(500)
+        res.Text(200, "finally")
+    })
+    r.Get("/fast", async func(req *http.Request, res *http.Response) void! {
+        res.Text(200, "quick")
+    })
+    var srv = http.Server{Addr: "127.0.0.1:0", Handler: r}
+    srv.Listen()?
+    var serving = srv.Serve()
+
+    // Timeout limits the whole request; it fails with task.ErrCancelled.
+    var fast = await http.NewRequest("GET", srv.URL() + "/fast").Timeout(1000).Send()?
+    println(fast.Body)
+
+    try await http.NewRequest("GET", srv.URL() + "/slow").Timeout(50).Send() catch err {
+        println("slow:", errors.Is(err, task.ErrCancelled))
+    }
+
+    await srv.Shutdown()
+    await serving?
+}

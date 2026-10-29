@@ -1,0 +1,5 @@
+len 2 cap 3
+closed: true
+got a
+got b
+recv: channel closed

@@ -1,0 +1,46 @@
+Calling an `async` function starts a task; `await` waits for its result. These programs show common
+concurrency patterns. [Async and concurrency](/docs/learn/async) explains tasks, `task.All`,
+cancellation and timeouts.
+
+## Fan out, collect in order
+
+<Example id="examples/tasks/fanout" />
+
+## CPU work on several cores
+
+A task that never awaits runs on the caller's thread. `task.Spawn` puts it on a worker thread, so
+chunks of CPU-bound work run in parallel.
+
+<Example id="examples/tasks/parallel" />
+
+## Limiting concurrency
+
+A buffered channel with `n` slots lets at most `n` tasks into a section at once.
+
+<Example id="examples/tasks/limit" />
+
+## Waiting with a deadline
+
+`task.Timeout` stops waiting but leaves the task running. To stop the task itself, use
+`task.WithTimeout`, shown in [Timeouts](/docs/learn/async#timeouts).
+
+<Example id="examples/tasks/deadline" />
+
+## Retry with backoff
+
+<Example id="examples/tasks/retry" />
+
+## WaitGroup
+
+<Example id="examples/tasks/waitgroup" />
+
+## Values in the task context
+
+`task.With` sets a value for everything the function calls and starts, like a request id, without
+passing it through every parameter.
+
+<Example id="examples/tasks/context" />
+
+## Next
+
+[Channels](/docs/examples/channels): passing values between tasks.

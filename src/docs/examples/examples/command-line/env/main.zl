@@ -1,0 +1,32 @@
+namespace config
+
+import io
+
+// A setting from the environment, with a default when it is unset or empty.
+func envOr(key string, fallback string) string {
+    var v = os.Getenv(key)
+    if v == "" {
+        return fallback
+    }
+    return v
+}
+
+func main() void! {
+    // Set a variable for this process (and the processes it starts).
+    os.Setenv("APP_MODE", "staging")?
+
+    println("mode:", envOr("APP_MODE", "production"))
+    println("port:", envOr("APP_PORT_UNSET_IN_THIS_DEMO", "8080"))
+
+    var port = try strings.ToInt(envOr("APP_PORT_UNSET_IN_THIS_DEMO", "8080")) else 0
+    println("port + 1:", port + 1)
+
+    // Environ lists KEY=value pairs.
+    var found = false
+    for kv in os.Environ() {
+        if strings.HasPrefix(kv, "APP_MODE=") {
+            found = true
+        }
+    }
+    println("in Environ:", found)
+}

@@ -1,0 +1,21 @@
+namespace zones
+
+import io
+
+func main() {
+    var meeting = time.Date(2026, 10, 30, 15, 0, 0, 0, nil)
+
+    // FixedZone needs no time-zone database, so it works everywhere.
+    var tokyo = time.FixedZone("JST", 9 * 3600)
+    var ny = time.FixedZone("EDT", -4 * 3600)
+
+    for loc in [time.UTC(), tokyo, ny] {
+        var t = meeting.In(loc)
+        var (name, offset) = t.Zone()
+        println(t.Format("2006-01-02 15:04 MST"), name, offset / 3600)
+    }
+
+    // A wall-clock time in a zone; Equal compares instants.
+    var local = time.Date(2026, 10, 31, 0, 0, 0, 0, tokyo)
+    println(local.Equal(meeting), local.UTC().Format(time.RFC3339))
+}

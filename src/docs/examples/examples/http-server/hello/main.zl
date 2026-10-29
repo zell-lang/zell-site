@@ -1,0 +1,26 @@
+namespace hello
+
+import io
+import net
+
+async func main() void! {
+    var r = http.NewRouter()
+    r.Get("/", async func(req *http.Request, res *http.Response) void! {
+        res.Text(200, "hello, world")
+    })
+
+    // Addr "127.0.0.1:8080" serves a fixed port; port 0 picks a free one.
+    var srv = http.Server{Addr: "127.0.0.1:0", Handler: r}
+    srv.Listen()?
+    var serving = srv.Serve()       // accepts connections until Shutdown
+
+    var res = await http.Get(srv.URL() + "/")?
+    println(res.Status, res.Body)
+    var wrong = await http.Post(srv.URL() + "/", "x", "text/plain")?
+    println(wrong.Status, wrong.Header("Allow"))
+
+    // Shutdown stops accepting and waits for requests in flight.
+    await srv.Shutdown()
+    await serving?
+    println("server stopped")
+}

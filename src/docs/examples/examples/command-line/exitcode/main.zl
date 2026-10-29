@@ -1,0 +1,32 @@
+namespace check
+
+import io
+
+// Return an exit code instead of calling os.Exit deep inside the program,
+// so that deferred calls run and the logic stays testable.
+func run(args []string) int {
+    if len(args) == 0 {
+        println("nothing to check")
+        return 0
+    }
+    var failed = 0
+    for a in args {
+        if strings.HasSuffix(a, ".zl") {
+            println("ok  ", a)
+        } else {
+            io.Eprintln("bad  " + a + ": not a .zl file")    // errors go to stderr
+            failed += 1
+        }
+    }
+    if failed > 0 {
+        return 1
+    }
+    return 0
+}
+
+func main() {
+    var code = run(os.Args()[1..])
+    if code != 0 {
+        os.Exit(code)
+    }
+}

@@ -1,0 +1,39 @@
+namespace orders
+
+import io
+import net
+
+struct Order {
+    Item string
+    Qty  int
+}
+
+async func main() void! {
+    var r = http.NewRouter()
+    r.Post("/orders", async func(req *http.Request, res *http.Response) void! {
+        // Answer client mistakes with a 4xx yourself.
+        var o = try req.JSON<Order>() catch err {
+            res.Text(400, "bad JSON: " + err.Message())
+            return
+        }
+        if o.Qty <= 0 {
+            res.Text(422, "qty must be positive")
+            return
+        }
+        // An error returned from the handler becomes a 500 response.
+        if o.Item == "unicorn" {
+            return error("inventory service is down")
+        }
+        res.Text(201, fmt.Format("ordered {0} x {1}", o.Qty, o.Item))
+    })
+    var srv = http.Server{Addr: "127.0.0.1:0", Handler: r}
+    srv.Listen()?
+    var serving = srv.Serve()
+
+    for body in [`{"Item": "tea", "Qty": 2}`, `{"Item": "tea", "Qty": "two"}`, `{"Item": "tea", "Qty": 0}`, `{"Item": "unicorn", "Qty": 1}`] {
+        var res = await http.Post(srv.URL() + "/orders", body, "application/json")?
+        println(res.Status, strings.Trim(res.Body))
+    }
+    await srv.Shutdown()
+    await serving?
+}

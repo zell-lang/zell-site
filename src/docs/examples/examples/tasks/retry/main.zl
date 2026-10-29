@@ -1,0 +1,42 @@
+namespace backoff
+
+import io
+
+struct Flaky {
+    calls int
+
+    async func Call() string! {
+        this.calls += 1
+        await task.Delay(1)
+        if this.calls < 3 {
+            return error("temporary failure")
+        }
+        return "ok after " + strconv.Itoa(this.calls) + " calls"
+    }
+}
+
+// Retry with exponential backoff: wait 2, 4, 8 ... ms between attempts.
+async func retry(s *Flaky, attempts int) string! {
+    var wait = 2
+    for i in 1..attempts + 1 {
+        var v = try await s.Call() catch err {
+            println("attempt", i, "failed:", err)
+            if i == attempts {
+                return err
+            }
+            println("waiting", wait, "ms")
+            await task.Delay(wait)
+            wait *= 2
+            continue
+        }
+        return v
+    }
+    return error("no attempts")
+}
+
+async func main() {
+    println(try await retry(new Flaky{}, 5) else "failed")
+    try await retry(new Flaky{}, 2) catch err {
+        println("gave up:", err)
+    }
+}

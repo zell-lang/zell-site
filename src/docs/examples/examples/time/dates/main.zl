@@ -1,0 +1,21 @@
+namespace dates
+
+import io
+
+func main() {
+    // A fixed moment: 2026-03-14 15:09:26 UTC (nil location = UTC).
+    var t = time.Date(2026, 3, 14, 15, 9, 26, 0, nil)
+    println(t)
+    println(t.Year(), t.Month(), t.MonthName(), t.Day(), t.WeekdayName())
+    println("day of year:", t.YearDay())
+    var (year, week) = t.ISOWeek()
+    println("ISO week:", year, week)
+
+    // AddDate adds calendar units; out-of-range values normalize.
+    println(t.AddDate(0, 1, 0).Format(time.DateOnly))
+    println(time.Date(2026, 1, 31, 0, 0, 0, 0, nil).AddDate(0, 1, 0).Format(time.DateOnly))
+    println(time.Date(2026, 13, 1, 0, 0, 0, 0, nil).Format(time.DateOnly))
+
+    // Unix timestamps in and out.
+    println(t.Unix(), time.Unix(0, 0).Format(time.RFC3339))
+}

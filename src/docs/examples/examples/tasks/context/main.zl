@@ -1,0 +1,29 @@
+namespace requests
+
+import io
+
+// A typed key for a value carried by the task context.
+var RequestId = task.Key<string>()
+
+async func audit(action string) {
+    await task.Delay(1)
+    // Code deep in the call chain reads the value without a parameter.
+    var id = task.Get(RequestId)
+    var shown = "none"
+    if id != nil {
+        shown = *id
+    }
+    println("[" + shown + "]", action)
+}
+
+async func handle(user string) string {
+    await audit("load " + user)
+    await audit("render " + user)
+    return "page for " + user
+}
+
+async func main() {
+    println(await task.With(RequestId, "req-1", () => handle("ann")))
+    println(await task.With(RequestId, "req-2", () => handle("bob")))
+    await audit("outside any request")
+}

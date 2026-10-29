@@ -1,0 +1,35 @@
+namespace shutdown
+
+import io
+
+struct Log {
+    mu    task.Mutex
+    lines []string
+
+    async func Add(s string) {
+        await this.mu.Lock()
+        this.lines = append(this.lines, s)
+        this.mu.Unlock()
+    }
+}
+
+async func server(name string, quit task.Channel<bool>, log *Log) {
+    // Recv fails for every receiver once quit is closed.
+    _ = try await quit.Recv() else false
+    await log.Add(name + " stopped")
+}
+
+async func main() {
+    var quit = task.Channel<bool>(0)
+    var log = new Log{}
+    var ts []Task<void> = []
+    for name in ["api", "worker", "metrics"] {
+        ts = append(ts, server(name, quit, log))
+    }
+
+    // Closing a channel wakes all its receivers at once: a broadcast.
+    quit.Close()
+    await task.All(ts)
+    slices.Sort(log.lines)
+    println(log.lines)
+}

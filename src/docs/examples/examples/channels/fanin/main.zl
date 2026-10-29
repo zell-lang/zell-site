@@ -1,0 +1,39 @@
+namespace merge
+
+import io
+
+async func source(name string, n int, out task.Channel<string>, wg *task.WaitGroup) {
+    defer wg.Done()
+    for i in 1..n + 1 {
+        await task.Delay(1)
+        await out.Send(fmt.Format("{0}-{1}", name, i))
+    }
+}
+
+// Close the shared channel once every sender is done.
+async func closeWhenDone(out task.Channel<string>, wg *task.WaitGroup) {
+    await wg.Wait()
+    out.Close()
+}
+
+async func main() {
+    var out = task.Channel<string>(4)
+    var wg = new task.WaitGroup{}
+    var sources = [("disk", 2), ("net", 3), ("cpu", 1)]
+    var ts []Task<void> = []
+    for s in sources {
+        wg.Add(1)
+        ts = append(ts, source(s.0, s.1, out, wg))
+    }
+    var closer = closeWhenDone(out, wg)
+
+    // Messages from several senders interleave: sort before printing.
+    var all []string
+    for msg in out {
+        all = append(all, msg)
+    }
+    await task.All(ts)
+    await closer
+    slices.Sort(all)
+    println(len(all), all)
+}

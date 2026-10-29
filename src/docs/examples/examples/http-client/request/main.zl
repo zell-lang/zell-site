@@ -1,0 +1,29 @@
+namespace search
+
+import io
+import net
+
+async func main() void! {
+    // The server echoes what it received.
+    var r = http.NewRouter()
+    r.Get("/search", async func(req *http.Request, res *http.Response) void! {
+        res.Text(200, fmt.Format("q={0} page={1} lang={2} agent={3}",
+            req.QueryValue("q"), req.QueryValue("page"), req.Header("Accept-Language"), req.Header("User-Agent")))
+    })
+    var srv = http.Server{Addr: "127.0.0.1:0", Handler: r}
+    srv.Listen()?
+    var serving = srv.Serve()
+
+    // Build a request: query parameters are escaped for you.
+    var res = await http.NewRequest("GET", srv.URL() + "/search")
+        .Query("q", "zell & go")
+        .Query("page", "2")
+        .Header("Accept-Language", "en")
+        .Header("User-Agent", "docs-example/1.0")
+        .Send()?
+    println(res.Status, res.Body)
+    println(http.QueryEscape("a b&c=d"))
+
+    await srv.Shutdown()
+    await serving?
+}

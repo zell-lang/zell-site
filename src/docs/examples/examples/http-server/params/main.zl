@@ -1,0 +1,30 @@
+namespace files
+
+import io
+import net
+
+async func main() void! {
+    var r = http.NewRouter()
+    // {name} matches one path segment.
+    r.Get("/users/{id}/posts/{post}", async func(req *http.Request, res *http.Response) void! {
+        res.Text(200, fmt.Format("user {0}, post {1}", req.Param("id"), req.Param("post")))
+    })
+    // A final * matches the rest of the path.
+    r.Get("/static/*", async func(req *http.Request, res *http.Response) void! {
+        res.Text(200, "file " + strings.TrimPrefix(req.Path, "/static/"))
+    })
+    // Query parameters come decoded.
+    r.Get("/search", async func(req *http.Request, res *http.Response) void! {
+        res.Text(200, fmt.Format("search \"{0}\" limit {1}", req.QueryValue("q"), req.QueryValue("limit")))
+    })
+
+    var srv = http.Server{Addr: "127.0.0.1:0", Handler: r}
+    srv.Listen()?
+    var serving = srv.Serve()
+    for path in ["/users/7/posts/42", "/static/css/site.css", "/search?q=red%20shoes&limit=5", "/users/7"] {
+        var res = await http.Get(srv.URL() + path)?
+        println(res.Status, strings.Trim(res.Body))
+    }
+    await srv.Shutdown()
+    await serving?
+}

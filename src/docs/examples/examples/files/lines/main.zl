@@ -1,0 +1,30 @@
+namespace todo
+
+import io
+
+func main() void! {
+    var dir = fs.Join(fs.TempDir(), "zell-lines-" + strconv.Itoa(os.Pid()))
+    fs.MkdirAll(dir)?
+    defer func() { _ = fs.RemoveAll(dir) }()
+    var path = fs.Join(dir, "todo.txt")
+
+    io.WriteLines(path, ["# todo", "write docs", "", "fix bug 42"])?
+
+    // ReadLines returns every line without its newline.
+    var lines = io.ReadLines(path)?
+    println(len(lines), "lines")
+
+    // A Scanner reads one line at a time, for files of any size.
+    var f = os.Open(path)?
+    defer func() { _ = f.Close() }()
+    var sc = io.NewScanner(f)
+    var n = 0
+    for sc.Scan() {
+        var line = sc.Text()
+        if line == "" || strings.HasPrefix(line, "#") {
+            continue
+        }
+        n += 1
+        println(n, line)
+    }
+}

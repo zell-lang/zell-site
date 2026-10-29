@@ -1,0 +1,19 @@
+namespace paths
+
+import io
+
+func main() {
+    // Base and Ext work on the last element of a path.
+    for p in ["docs/guide/intro.md", "archive.tar.gz", "Makefile", "src/"] {
+        println(fs.Base(p), "|" + fs.Ext(p) + "|")
+    }
+
+    // Swap an extension.
+    var src = "report.md"
+    var html = strings.TrimSuffix(src, fs.Ext(src)) + ".html"
+    println(html)
+
+    // On Windows Join and Dir use backslashes, so compare parts, not whole strings.
+    var p = fs.Join("logs", "app.log")
+    println(fs.Base(p), fs.Base(fs.Dir(p)))
+}

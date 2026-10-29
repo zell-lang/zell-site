@@ -1,0 +1,49 @@
+Reading and writing files takes one call each: `io.ReadFile` and `io.WriteFile` work on whole files,
+`os.Open` and `os.Create` give a `File` for streaming, and `fs` handles paths and directories. Every
+program here works in its own directory under `fs.TempDir()` and removes it at the end.
+
+## Reading and writing a whole file
+
+<Example id="examples/files/readwrite" />
+
+## Line by line
+
+`io.ReadLines` loads all lines at once. An `io.Scanner` over an open file reads one line at a time, so
+memory use does not grow with the file.
+
+<Example id="examples/files/lines" />
+
+## Open files
+
+`os.Create` truncates or creates; `os.OpenFile` takes flags such as `os.O_APPEND`. `Close` returns
+`void!`, so a write error that shows up only on close is not lost.
+
+<Example id="examples/files/handles" />
+
+## Directories
+
+<Example id="examples/files/dirs" />
+
+## Walking a tree
+
+There is no built-in walker in 0.1.5; a short recursive function over `fs.ReadDir` does the job, and
+its order is stable because `ReadDir` sorts names.
+
+<Example id="examples/files/walk" />
+
+## A missing file
+
+Every "not found" error wraps `fs.ErrNotFound`, whatever the operating system's message says.
+
+<Example id="examples/files/missing" />
+
+## Paths
+
+`fs.Join` and `fs.Dir` use the platform's separator, a backslash on Windows. `fs.Base` and `fs.Ext`
+give the same result everywhere.
+
+<Example id="examples/files/paths" />
+
+## Next
+
+[JSON](/docs/examples/json): encoding and decoding structs, attributes, dynamic values.

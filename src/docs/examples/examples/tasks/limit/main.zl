@@ -1,0 +1,43 @@
+namespace limit
+
+import io
+
+struct Gauge {
+    mu      task.Mutex
+    current int
+    peak    int
+
+    async func Enter() {
+        await this.mu.Lock()
+        this.current += 1
+        this.peak = math.IMax(this.peak, this.current)
+        this.mu.Unlock()
+    }
+
+    async func Leave() {
+        await this.mu.Lock()
+        this.current -= 1
+        this.mu.Unlock()
+    }
+}
+
+// A buffered channel with 2 slots works as a semaphore.
+async func job(id int, slots task.Channel<bool>, g *Gauge) int {
+    await slots.Send(true)          // waits while both slots are taken
+    await g.Enter()
+    await task.Delay(5)
+    await g.Leave()
+    _ = await slots.Recv()          // frees the slot
+    return id * id
+}
+
+async func main() {
+    var slots = task.Channel<bool>(2)
+    var g = new Gauge{}
+    var ts []Task<int> = []
+    for id in 1..9 {
+        ts = append(ts, job(id, slots, g))
+    }
+    println(await task.All(ts))
+    println("at most 2 at once:", g.peak <= 2)
+}

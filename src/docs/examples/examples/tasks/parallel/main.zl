@@ -1,0 +1,32 @@
+namespace primes
+
+import io
+
+// CPU-bound work: no await inside.
+func countPrimes(lo int, hi int) int {
+    var n = 0
+    for x in lo..hi {
+        if x < 2 {
+            continue
+        }
+        var d = 2
+        for d * d <= x && x % d != 0 {
+            d += 1
+        }
+        if d * d > x {
+            n += 1
+        }
+    }
+    return n
+}
+
+async func main() {
+    // task.Spawn runs each chunk on a worker thread, so the chunks run in parallel.
+    var ts []Task<int> = []
+    for i in 0..4 {
+        var lo = i * 250000
+        ts = append(ts, task.Spawn(async () => countPrimes(lo, lo + 250000)))
+    }
+    var counts = await task.All(ts)
+    println(counts, "total:", slices.Sum(counts))
+}

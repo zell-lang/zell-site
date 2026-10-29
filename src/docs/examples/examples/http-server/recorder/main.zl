@@ -1,0 +1,26 @@
+namespace greet
+
+import io
+import net
+
+func routes() *http.Router {
+    var r = http.NewRouter()
+    r.Get("/greet/{name}", async func(req *http.Request, res *http.Response) void! {
+        var greeting = "Hello"
+        if req.QueryValue("lang") == "fr" {
+            greeting = "Bonjour"
+        }
+        res.Text(200, greeting + ", " + req.Param("name"))
+    })
+    return r
+}
+
+async func main() {
+    // net.http.test.Serve calls the handler directly: no socket, no port.
+    // Handy in tests, and for trying handlers out.
+    var r = routes()
+    for target in ["/greet/ann", "/greet/luc?lang=fr", "/nope"] {
+        var res = await http.test.Serve(r, http.test.NewRequest("GET", target, ""))
+        println(res.Status, strings.Trim(res.Body))
+    }
+}

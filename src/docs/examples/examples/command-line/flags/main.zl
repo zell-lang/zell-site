@@ -1,0 +1,30 @@
+namespace resize
+
+import io
+
+// Each field is a flag; its default is the field's default value.
+struct Flags {
+    @cli.flag(short: "w", help: "target width in pixels") Width int = 800
+    @cli.flag(help: "keep the aspect ratio") Keep bool
+    @cli.flag(env: "RESIZE_FORMAT", help: "output format") Format string = "png"
+}
+
+func main() {
+    var app = cli.App{
+        Name: "resize",
+        Version: "1.0.0",
+        Help: "resize images",
+        Flags: cli.FlagsOf<Flags>(),
+        Action: func(c *cli.Context) void! {
+            var f = cli.Bind<Flags>(c)?
+            if len(c.Args) == 0 {
+                println("no files given; defaults: width", f.Width, "keep", f.Keep, "format", f.Format)
+                return
+            }
+            for file in c.Args {
+                println(fmt.Format("{0} -> width {1}, keep {2}, {3}", file, f.Width, f.Keep, f.Format))
+            }
+        },
+    }
+    os.Exit(app.Run(os.Args()))
+}
