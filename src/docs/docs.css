@@ -130,3 +130,60 @@
   .docs-main { padding-top: 24px; }
   .pager { grid-template-columns: 1fr; }
 }
+
+/* standard library reference */
+.toc-side { max-height: calc(100vh - 120px); overflow-y: auto; scrollbar-width: thin; }
+.kind { display: inline-block; font-family: var(--font); font-size: .68rem; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; padding: 1px 6px; border-radius: 3px; background: var(--even-bg); color: var(--fg-muted); vertical-align: middle; }
+.kind.func, .kind.method { color: var(--accent); }
+.kind.struct, .kind.interface, .kind.enum { color: var(--win); }
+.kind.const { color: var(--tok-num); }
+.std-search input { width: 100%; font: inherit; font-size: 1rem; padding: 12px 16px; border: 1px solid var(--line); border-radius: 3px; background: var(--bg); color: var(--fg); }
+.std-search input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+.std-search { margin-bottom: 8px; }
+.std-hits ul, .std-list { list-style: none; padding: 0 !important; margin: 0; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.std-hits li, .std-list li { display: grid; grid-template-columns: minmax(180px, 34%) 1fr; gap: 6px 20px; padding: 10px 16px; background: var(--bg); align-items: baseline; }
+.std-list li { grid-template-columns: minmax(160px, 28%) 40px 1fr; }
+.std-hits li + li, .std-list li + li { border-top: 1px solid var(--line); }
+.std-hits a { display: flex; gap: 10px; align-items: baseline; }
+.std-hits code, .std-list code { font-size: .9rem; border: 0 !important; background: none !important; padding: 0 !important; }
+.std-ns { color: var(--fg-muted); }
+.std-count { font-family: var(--mono); font-size: .8rem; color: var(--fg-muted); text-align: right; }
+.std-sum { color: var(--fg-muted); font-size: .9rem; line-height: 1.5; }
+.std-group h2 { font-family: var(--mono); font-size: 1.1rem; margin: 32px 0 10px; }
+.stdlib { max-width: 64rem; }
+
+.doc.api { max-width: 60rem; }
+.doc.api h1 code { font-size: inherit; background: none; border: 0; padding: 0; }
+.api-meta { font-size: .86rem; color: var(--fg-muted); margin: -16px 0 24px; }
+.api-index { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px 32px; padding: 18px 22px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg-alt); margin-bottom: 8px; }
+.api-index h4 { margin: 0 0 6px; font-size: .76rem; text-transform: uppercase; letter-spacing: .08em; color: var(--fg-muted); }
+.api-index ul { list-style: none; padding: 0 !important; margin: 0; columns: 1; font-family: var(--mono); font-size: .84rem; }
+.api-index li { line-height: 1.7; }
+.api-item { padding: 22px 0 8px; border-top: 1px solid var(--line); }
+.doc .api-item h3 { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; font-size: 1.1rem; }
+.doc .api-item h3 code, .doc .api-method h4 code { font-size: 1rem; background: none; border: 0; padding: 0; }
+.api-item .src { margin-left: auto; font-family: var(--font); font-size: .78rem; font-weight: 400; color: var(--fg-muted); }
+.sig { margin: 0 0 12px; padding: 12px 16px; background: var(--code-bg); border: 1px solid var(--line); border-radius: 6px; font-size: .86rem; line-height: 1.6; color: var(--code-fg); overflow-x: auto; white-space: pre-wrap; }
+.members { margin: 8px 0 16px; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.members > div { padding: 8px 14px; }
+.members > div + div { border-top: 1px solid var(--line); }
+.members dt code { font-size: .86rem; background: none !important; border: 0 !important; padding: 0 !important; }
+.members dd { margin: 4px 0 0; color: var(--fg-muted); font-size: .9rem; }
+.members dd p { margin: 0; }
+.api-method { margin: 16px 0 0 18px; padding-left: 16px; border-left: 2px solid var(--line); }
+.doc .api-method h4 { display: flex; align-items: center; gap: 10px; margin: 0 0 8px; font-size: .95rem; }
+.api-example { margin-top: 4px; }
+@media (max-width: 600px) {
+  .std-hits li, .std-list li { grid-template-columns: 1fr; }
+  .std-count { display: none; }
+}
+
+/* docs home: packages strip under the section grid */
+.doc-strip { margin-top: 20px; display: flex; align-items: center; justify-content: space-between; gap: 24px 48px; flex-wrap: wrap; padding: 24px 28px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); }
+.doc-strip-head { display: flex; align-items: flex-start; gap: 18px; }
+.doc-strip-head svg { flex: none; width: 28px; height: 28px; color: var(--accent); }
+.doc-strip h3 a { color: var(--fg); }
+.doc-strip p { margin: 4px 0 0; color: var(--fg-muted); font-size: .95rem; }
+.doc-strip ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.doc-strip li a { display: block; font-family: var(--mono); font-size: .84rem; padding: 6px 12px; border: 1px solid var(--line); border-radius: 3px; color: var(--fg); }
+.doc-strip li a:hover { border-color: var(--accent); text-decoration: none; }

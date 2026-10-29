@@ -5,13 +5,14 @@
   "type": "module",
   "scripts": {
     "release": "node scripts/fetch-release.mjs",
-    "predev": "npm run release",
+    "predev": "npm run release && npm run stdlib",
     "dev": "vite",
-    "prebuild": "npm run release",
+    "prebuild": "npm run release && npm run stdlib",
     "build": "tsc --noEmit && vite build && node scripts/routes.mjs",
-    "deploy": "npm run build && node scripts/deploy.mjs upload",
+    "deploy": "node scripts/publish.mjs",
     "preview": "vite preview",
-    "php": "php -S localhost:8000 -t public"
+    "php": "php -S localhost:8000 -t public",
+    "stdlib": "node scripts/gen-stdlib.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",

@@ -9,7 +9,7 @@ import { Readable } from "node:stream";
 import { fileURLToPath } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const DIST = join(ROOT, "dist");
+const DIST = process.env.DIST || join(ROOT, "dist");  // scripts/publish.mjs builds elsewhere
 const ENV_FILE = join(ROOT, ".env.deploy");
 
 function readEnv() {

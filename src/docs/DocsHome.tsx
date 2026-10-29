@@ -46,16 +46,21 @@ export default function DocsHome() {
               </div>
             );
           })}
-          <div className="feat doc-card">
+        </div>
+        <div className="doc-strip">
+          <div className="doc-strip-head">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z" /><path d="M4 7.5l8 4.5 8-4.5M12 12v9" /></svg>
-            <h3><a href="https://github.com/zell-lang">Packages and examples</a></h3>
-            <p>Showcase repositories with a web service, a CLI and a worker, and packages built on the standard library.</p>
-            <ul>
-              <li><a href="https://github.com/zell-lang/example-web-service">example-web-service</a></li>
-              <li><a href="https://github.com/zell-lang/example-cli">example-cli</a></li>
-              <li><a href="https://github.com/zell-lang/example-worker">example-worker</a></li>
-            </ul>
+            <div>
+              <h3><a href="https://github.com/zell-lang">Packages and showcase projects</a></h3>
+              <p>Complete programs and packages built on the standard library, on GitHub.</p>
+            </div>
           </div>
+          <ul>
+            <li><a href="https://github.com/zell-lang/example-web-service">example-web-service</a></li>
+            <li><a href="https://github.com/zell-lang/example-cli">example-cli</a></li>
+            <li><a href="https://github.com/zell-lang/example-worker">example-worker</a></li>
+            <li><a href="https://github.com/zell-lang/zconf">zconf</a></li>
+          </ul>
         </div>
       </section>
     </>

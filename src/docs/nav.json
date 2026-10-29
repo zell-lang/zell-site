@@ -276,8 +276,8 @@
         {
           "slug": "stdlib",
           "title": "Standard library",
-          "status": "planned",
-          "summary": "Every namespace, type and function, generated from doc comments."
+          "status": "ready",
+          "summary": "Every namespace, type and function, generated from the doc comments of the released compiler."
         },
         {
           "slug": "cli",

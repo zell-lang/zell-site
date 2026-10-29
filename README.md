@@ -43,8 +43,10 @@ npm run dev          # http://localhost:5173 (fetches the latest release from Gi
 ## Deploy
 
 ```sh
-npm run deploy       # build, upload dist/, remove stale assets
+npm run deploy       # build the last commit in a temporary worktree, upload it, remove stale assets
 ```
+
+Only committed work is published: uncommitted pages (someone may be writing them) stay local.
 
 `.env.deploy` (not in git) holds `FTP_HOST`, `FTP_USER`, `FTP_PASSWORD`, `FTP_DIR`, `FTP_SECURE`
 and, for the PHP API, `DEPLOY_API` and `DB_*`. `node scripts/deploy.mjs check` connects and lists

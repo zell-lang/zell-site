@@ -12,6 +12,8 @@ const nav = JSON.parse(readFileSync(join(ROOT, "src", "docs", "nav.json"), "utf8
 const ROUTES = [
   "download", "why", "performance", "docs",
   ...nav.sections.flatMap(s => [`docs/${s.id}`, ...s.items.map(i => `docs/${s.id}/${i.slug}`)]),
+  ...JSON.parse(readFileSync(join(ROOT, "src", "generated", "stdlib", "index.json"), "utf8"))
+    .namespaces.map(ns => `docs/reference/stdlib/${ns.name}`),
 ];
 
 for (const r of ROUTES) {

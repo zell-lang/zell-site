@@ -60,7 +60,7 @@ export default function DocArticle() {
 }
 
 /** "On this page": the article's h2/h3 headings, the one in view highlighted. */
-function Toc() {
+export function Toc() {
   const [items, setItems] = useState<{ id: string; text: string; level: number }[]>([]);
   const [current, setCurrent] = useState("");
   const observer = useRef<IntersectionObserver>();
