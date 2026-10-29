@@ -177,7 +177,7 @@ export const GROUPS: Group[] = [
       { bench: "defer_errors_iface", phase: "sum through an interface", ratio: 1.24 },
       { bench: "defer_errors_iface", phase: "closure calls", ratio: 1.27 },
       { bench: "defer_errors_iface", phase: "interface method calls", ratio: 1.39 },
-      { bench: "defer_errors_iface", phase: "sentinel error through 3 levels of ?", ratio: 5.84, note: "With error traces on; built with --no-error-trace it is 1.18× Go." },
+      { bench: "defer_errors_iface", phase: "sentinel error through 3 levels of ?", ratio: 2.6, note: "With error traces on, after commit 05a42f6 (was 5.8×); RESULTS-latency.md, which names no machine for this re-run. With --no-error-trace: 1.18× (4 vCPU)." },
       { bench: "defer_errors_iface", phase: "function with defer", ratio: 6.79, note: "Two heap objects per call today." },
     ],
   },
@@ -258,7 +258,7 @@ export const SIZES: { label: string; kb: number; zell: boolean }[] = [
 /** Where Zell is behind today, why, and what is planned. Shown at the top of the page. */
 export const BEHIND: { what: string; why: string }[] = [
   { what: "Await chains that suspend (2×), channel pipelines (1.6×), worker pools (1.7×), select merge (2.1×)", why: "Each resumed frame still goes through a task object and the run queue, while Go switches stacks directly. Thin await and direct hand-off on channels are the next item on the roadmap." },
-  { what: "defer (6.8×) and sentinel errors with traces (5.8×)", why: "A deferred call allocates two heap objects; a constant error copies its trace on every return. Both have known fixes; --no-error-trace brings errors to 1.18×." },
+  { what: "defer (6.8×) and sentinel errors with traces (2.6×)", why: "A deferred call allocates two heap objects. A failing call with a constant error still makes four small runtime calls to record its trace; --no-error-trace brings it to 1.18×." },
   { what: "Heap churn (2.3×) and objects read across threads (2.9×)", why: "Large-buffer churn pays page faults that Go's allocator amortizes, and cross-thread reads pay atomic reference counts. This is the cost of having no GC." },
   { what: "Signatures and ChaCha20 (6.5–8.2×)", why: "Ed25519 and P-256 have no fixed-base tables yet, ChaCha20 no AVX2 path. SHA-256 and AES-GCM already match Go." },
   { what: "Small buffered I/O and line scanning (2.4–9×), linked list, string sort, templates (3–5.7×)", why: "Measured before performance wave 2 on the 4 vCPU machine; the buffered reader path and these collections have not been tuned yet." },

@@ -1,0 +1,6 @@
+describe guest: not found
+  9 lookup 
+  15 owner 
+  19 describe describe guest
+  23 main 
+is ErrNotFound: true

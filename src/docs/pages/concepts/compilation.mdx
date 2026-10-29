@@ -1,0 +1,137 @@
+`zell build` turns `.zl` files into one native executable. It needs no system compiler, linker or
+C library headers: LLVM is linked into the `zell` binary, and the toolchain archive carries a linker
+(`lld`) and everything needed to link for each supported target. This page follows a program through
+the pipeline and explains what ends up in the binary.
+
+## The pipeline
+
+| Stage | What happens | Where |
+|---|---|---|
+| Lexer | text to tokens; semicolons are inserted at line ends, as in Go | `compiler/src/lexer.rs` |
+| Parser | tokens to an AST, one `namespace` per file | `compiler/src/parser/` |
+| Name resolution | files merged by namespace, the standard library added, imports and signatures resolved | `sema/resolve.rs` |
+| Type checking and lowering | attributes evaluated, bodies type-checked and lowered to typed HIR in one pass; lambdas lifted to functions | `sema/` |
+| Monomorphization | each distinct instantiation of a generic becomes an ordinary function or type | `sema/generics.rs` |
+| HIR analyses | ownership and borrowing (which counts can be skipped), escape analysis, which `async` functions can suspend | `compiler/src/hir/` |
+| Code generation | HIR to an LLVM module, through `inkwell` | `compiler/src/codegen/` |
+| Optimization | dead stdlib code removed first, then LLVM's pass pipeline (`-O0` to `-O3`) | `compiler/src/build.rs` |
+| Object files | machine code; large modules are split across threads | `compiler/src/parcodegen.rs` |
+| Line table | file and line of every function, for panic backtraces | `compiler/src/lines.rs` |
+| Link | the objects, the C runtime and the target's link inputs, with the bundled `lld` | `compiler/src/crosslink.rs` |
+
+`ZELL_TIME=1` prints the time of each stage. For a hello world in debug mode (zell 0.1.5, Windows 11,
+AMD Ryzen 5 8400F):
+
+```text
+zell: time parse            0.1 ms
+zell: time std-parse       31.3 ms
+zell: time lint             0.2 ms
+zell: time front-end       44.8 ms
+zell: time codegen         26.1 ms
+zell: time optimise        57.7 ms
+zell: time object-par       0.0 ms
+zell: time object         307.3 ms
+zell: time lines            2.0 ms
+zell: time link            47.7 ms
+```
+
+### The standard library is compiled with your program
+
+The standard library ships as source (`<toolchain>/std/`) and is parsed on every build, on several
+threads. Its generic functions are instantiated with your program's types, as in C++ or Rust, so
+`slices.SortBy` over a slice of your structs is compiled for that struct, without boxing. Code generation emits every
+stdlib function your program could reach. A `globaldce` pass then removes what is unused before the
+optimizer runs, which made `hello --release` compile in 0.31 s instead of 1.35 s
+(`benchmarks/README.md`, "Results, performance pass 2", 2026-10-21, 4 vCPU x86-64).
+
+Generics are checked once against their constraints, Go style, then compiled per instantiation.
+Compile-time reflection (`reflect.Fields<T>()`, static `if`) is expanded at the same point, so by the
+time code generation runs there are no generics and no reflection loops left: only concrete functions.
+
+### Packages compile separately
+
+In a package build each package becomes its own object file, `target/zell/<package>-<hash>.o`. The
+hash covers the package's IR, the flags and the compiler version, so an unchanged package is not
+recompiled. Every function and global gets its own section, like `-ffunction-sections`, so the linker can
+drop unused code function by function.
+
+## The runtime
+
+The language runtime is a C11 library, `libzell_rt.a`, linked statically into every program: the
+allocator and reference counting, strings, slices and maps, errors and panics, the task scheduler, I/O,
+and the parts of the standard library that are faster in C (JSON parsing, crypto, regex, compression).
+Its interface with the compiler is a documented ABI (`runtime/ABI.md`): object layouts, who owns which
+reference, NULL rules. The runtime is prebuilt for every target in the toolchain archive.
+
+Subsystems start lazily. The scheduler starts with the first task, so a program without tasks stays
+single-threaded. Shutdown, leak reporting and the debug agent are reached through function pointers that
+a subsystem sets when it starts. A program that never uses a subsystem does not link it.
+
+## Linking for any target
+
+`zell build --target <name>` works from any host, because LLVM generates code for every target from one
+binary and the toolchain carries the link inputs:
+
+| Target | Inputs in `<toolchain>/targets/<triple>/` | Result |
+|---|---|---|
+| `linux-amd64`, `linux-arm64` | runtime, compiler-rt, crt objects, glibc 2.31 stub libraries | dynamic executable against the system's glibc |
+| `linux-amd64-musl`, `linux-arm64-musl` | runtime, compiler-rt, musl 1.2.5 `libc.a` | fully static executable |
+| `windows-amd64` | runtime, compiler-rt, mingw-w64 CRT and import libraries | PE executable (MinGW ABI) |
+| `macos-arm64`, `macos-amd64` | runtime, compiler-rt, `libSystem.tbd` | Mach-O; arm64 binaries are signed ad hoc by `lld` |
+
+`zell` builds the `lld` command line itself, so no system linker or SDK is involved. `zell target list`
+shows each target and its runtime, and `zell doctor` checks that every input is present.
+
+## Debug and release builds
+
+| | `zell build` (debug) | `zell build --release` |
+|---|---|---|
+| Optimization | none | `-O2` |
+| Debug info | DWARF, so `zell debug` and gdb/lldb work | none (`-g` keeps it) |
+| Unused code | kept, and symbols exported for the debugger | removed per function (`--gc-sections`) |
+| Symbols | kept | stripped |
+| Panic backtraces | file and line | file and line, from the line table |
+
+Panic backtraces do not depend on debug info. The compiler builds a compact table of function address
+ranges and source lines from the DWARF of its own objects, and links it in as ordinary read-only data.
+So a stripped release binary still reports `main.zl:14 main` on every OS.
+
+## Why hello world is small
+
+A release hello world built with zell 0.1.5 (measured for this page, cross-compiled on Windows):
+
+| Target | Size |
+|---|---:|
+| `linux-amd64` | 45 336 bytes |
+| `linux-arm64` | 46 520 bytes |
+| `linux-amd64-musl` (fully static) | 90 056 bytes |
+| `windows-amd64` | 100 864 bytes |
+| `macos-arm64` | 104 880 bytes |
+| `linux-amd64`, debug build | 890 496 bytes |
+
+For comparison, a stripped Go hello world on Linux was 1 404 KB (`benchmarks/README.md`, "Final
+results", 2026-10-21, x86-64 Linux). The Zell binary is small for four reasons:
+
+- **No garbage collector and no goroutine stacks.** The runtime's memory management is the allocator
+  and the reference counts.
+- **Lazy subsystems.** Hello world never starts the scheduler, the I/O poller, the resolver or the debug
+  agent, so none of them is linked.
+- **Per-function dead-code removal.** Only the stdlib and runtime functions the program reaches survive.
+  Of the 45 KB Linux binary, 26 KB is code (`.text`), almost all of it the runtime's
+  allocator, reference counting and panic support.
+- **Dynamic libc on Linux and macOS.** The C library comes from the system. The musl build includes it
+  and is twice the size. The Windows build links parts of the mingw-w64 CRT statically.
+
+The debug build is 20 times larger because nothing is removed: the whole runtime is linked, and symbols
+are exported for the debugger.
+
+<Callout type="note">
+Link-time optimization between the program and the runtime is optional and off by default
+(`ZELL_LTO=1` with a release build). It needs a system clang and lld, and it does not apply to
+cross builds.
+</Callout>
+
+## Next
+
+This is the end of the Concepts section. [Memory without a garbage collector](/docs/concepts/memory-model)
+is a good place to start over if you skipped it.

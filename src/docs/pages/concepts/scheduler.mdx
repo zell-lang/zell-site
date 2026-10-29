@@ -1,0 +1,127 @@
+Zell runs `async` code as tasks on a pool of worker threads, with the stdlib's I/O built on readiness
+polling. The scheduling policy is Go's, a design proven on many-core servers. The unit of
+suspension is different: an `await` suspends a compiled coroutine frame, where Go parks a goroutine
+with its whole stack. This page explains the parts and what they cost. How to write async code is in
+[Async and tasks](/docs/learn/async).
+
+## Coroutines instead of stacks
+
+Each `async func` is compiled to an LLVM coroutine: a state machine whose live variables are kept in a
+heap-allocated *frame* instead of on a thread's stack. `await` on a task that is not done registers the
+frame as a continuation of that task and returns to the worker's loop. When the task completes, the
+continuation is posted to the scheduler, and a worker, possibly on another thread, resumes the frame
+where it stopped.
+
+Three properties keep this cheap:
+
+- **No task until the first suspension.** Calling an `async` function runs its body on the caller's
+  thread, like a normal call, until it first has to wait. A body that finishes without waiting, such
+  as a cache hit, a buffered read or a free mutex, hands its result straight back, with no task
+  object. A body with no suspension points at all has no frame either: LLVM turns it into a plain
+  function.
+- **Frame-linked await.** `await f()` directly inside another `async` function makes no task for `f`
+  even if it suspends. Its frame is linked to the waiting frame, the whole chain runs in the task of
+  its root, and completion resumes the waiting frame directly.
+- **Never-suspending functions are plain functions.** After monomorphization, the compiler finds
+  `async` functions that can never suspend and compiles them as ordinary functions with the same ABI.
+
+A suspended task costs its frame (its live variables), not a stack. The cost is in resuming: each real
+suspension is a trip through the scheduler, where Go switches stacks.
+
+## Workers and run queues
+
+The pool has one worker per CPU (`ZELL_WORKERS` overrides it). The scheduler starts with the first task,
+so a program without tasks stays single-threaded and counts references without atomics. The queues
+follow Go's design:
+
+| Queue | Who uses it |
+|---|---|
+| a **local ring** of 256 jobs per worker | posts made on that worker: spawns, `task.Yield`, continuations. Only the owner pushes; owner and thieves pop with a compare-and-swap |
+| a **run-next slot** per worker | the first continuation of a task completed on that worker: it runs as soon as the current job yields, with no queue in between |
+| one **global FIFO** | posts from other threads (the main thread, the timer thread) and overflow from full rings; each worker checks it every 61 jobs |
+
+The run-next slot is what makes hand-offs fast. When a task sends on a channel and the receiver wakes,
+the receiver runs next on the same worker, while the data is still in cache. To stay fair, after 32
+consecutive run-next jobs one ring job runs in between.
+
+**Work stealing.** A worker that runs out of work checks its run-next slot, its ring and the global queue,
+then polls the network, then steals half of another worker's ring. If that fails it spins briefly
+(at most one worker spins at a time, for up to 50 µs) and finally parks. A post wakes a parked worker
+only when nobody is spinning, so a burst of posts does not wake the whole pool.
+
+## The poller lives in idle workers
+
+Sockets and other I/O wait for readiness through the platform poller (epoll on Linux, IOCP behind the
+same readiness interface on Windows). With shared pollers such as epoll, readiness is picked up by the
+workers themselves, as in Go's `findrunnable`, not by a separate poller thread:
+
+- an idle worker polls the network with a zero timeout before stealing, and the completed waits go to
+  its own ring;
+- the last worker to go idle blocks in the poller itself, with the next I/O deadline as its timeout,
+  instead of on a condition variable;
+- a watchdog thread polls on the workers' behalf only when all of them have been busy for 10 ms.
+
+Readiness therefore usually costs no thread switch. When this landed, `async_io` went from 794k to 5.9k
+context switches and its p99 from 6.2 to 2.0 ms (`benchmarks/README.md`, "Netpoll in the scheduler",
+2026-10-24, 16-core AMD Ryzen 7 8845HS, Fedora 42).
+
+## Channels and mutexes
+
+`task.Channel` and `task.Mutex` are implemented in the C runtime. A waiting receiver or locker is woken
+through the run-next slot. `task.Mutex` follows Go's `sync.Mutex`: `Unlock` wakes the oldest waiter, but
+a running task may take the lock first (barging), a contended `Lock` spins up to about 100 times before
+queueing, and a waiter that has waited more than 1 ms switches the mutex to strict FIFO hand-off until
+the queue drains. Barging keeps a lock that is taken and released in quick succession on one core.
+Starvation mode bounds the wait.
+
+## Cancellation follows the task tree
+
+Every task has a parent and a **task context**: its cancellation scope, deadline and context values. A
+task started inside another inherits it. Cancelling a scope (`h.Cancel()` of `task.NewCancel()`, the
+deadline of `task.WithTimeout`, the losers of `task.Any`, the rest of a failed `task.All`) marks every
+task in it. Cancellation is cooperative: it takes effect when a task waits. A pending receive or network
+read wakes at once with `task.ErrCancelled`, and a `task.Delay` returns early and removes its timer.
+There is no token to pass through signatures, and a cancelled `task.All` returns only after the
+cancelled tasks have finished, so nothing leaks into the background.
+
+## Panics stay in their task
+
+A panic ends the task it happens in, not the process. The runtime unwinds that task's frames, `async`
+and synchronous alike, running `defer`s and `Drop`s and releasing live values, so locks are released
+and counts balance. The task's owner then sees the panic: as an error matching `task.ErrPanic` when
+awaiting a `Task<T!>`, or as a repeated panic when awaiting a `Task<T>`. A task that nobody awaits
+prints its panic to stderr. A panic in `main` outside any task still ends the process with status 2.
+
+## How it compares
+
+The async wave of October 2026 measured Zell against Go 1.24.7 and .NET 10 on a 16-thread AMD Ryzen 7
+8845HS under Fedora 42, interleaving the runtimes for 5 rounds and taking medians
+(`benchmarks/README.md`, "Async wave result", 2026-10-25). Ratios below 1 mean Zell is faster:
+
+| Benchmark, phase | Zell | Go | Zell / Go |
+|---|---:|---:|---:|
+| `mutex_contention`, contended | 107 ms | 203 ms | 0.53 |
+| `cancel_tree`, cancel drain | 2 323 µs | 4 336 µs | 0.54 |
+| `spawn_tasks`, park 1M tasks | 235 ms | 1 101 ms | 0.21 |
+| `spawn_tasks`, wake 1M tasks | 89 ms | 121 ms | 0.74 |
+| `timers`, mean lateness | 41 µs | 126 µs | 0.33 |
+| `async_io`, p99 latency | 1 591 µs | 2 420 µs | 0.66 |
+| `async_io`, total | 1 254 ms | 1 256 ms | 1.00 |
+| `channel_pingpong`, 5M round trips | 430 ms | 418 ms | 1.03 |
+| `await_chain`, 10M calls without suspension | 11 ms | 10 ms | 1.10 |
+| `spawn_tasks`, run 1M tasks | 246 ms | 148 ms | 1.66 |
+| `channel_pingpong`, pipeline | 125 ms | 76 ms | 1.64 |
+| `fanout_fanin`, pool | 136 ms | 78 ms | 1.74 |
+| `await_chain`, 1k chains that really suspend | 14 ms | 7 ms | 2.00 |
+| `select_many`, merge | 827 ms | 396 ms | 2.09 |
+
+Zell wins where tasks wait and wake in bulk, where the barging mutex keeps work on one core, and where
+cancellation drains a tree: `cancel_tree` needed 14x fewer context switches than Go. It loses where every
+step really suspends and resumes. Each such step still goes through a queue, while Go switches
+goroutine stacks directly. `select_many` also pays for idle-worker churn: 507k context switches against
+Go's 76k. These gaps are the current roadmap for async performance.
+
+## Next
+
+[From source to binary](/docs/concepts/compilation): the compiler pipeline and what ends up in an
+executable.

@@ -1,0 +1,128 @@
+An error in Zell is a value returned by a function, not an exception, yet it can still tell you where
+it came from. Every error records the place it was created and each `?` it passed through on the way
+up. This is a **return trace**, like Zig's error return traces: it follows the path the error actually
+took, built one step at a time as the error is returned. Nothing unwinds the stack, and nothing is
+symbolized at run time.
+
+## What a trace records
+
+An error's trace has a *creation site* and then one *frame* per propagation step:
+
+- the creation site is `error(...)`, `errors.New`, `errors.Wrap`, a struct converted to `error`, a
+  standard-library call that returned an error, or `return err` for an error that has no site yet;
+- every `?` adds a `returned via` frame, with the text of `?("context")` when there is one;
+- the `try … catch` that handles the error adds the last frame.
+
+<Example id="concepts/error-traces/trace" />
+
+The example prints the trace's records with `errors.Frames`. `errors.Trace` gives the same records as
+text (this is `zell run .` on Windows; paths are printed relative to the working directory, as the
+compiler was given them):
+
+```text
+  created at   .\main.zl:9   lookup
+  returned via .\main.zl:15  owner
+  returned via .\main.zl:19  describe  ?("describe guest")
+  returned via .\main.zl:23  main
+```
+
+`println(err)` prints only the message. You choose where the trace goes: a log line, an HTTP 500 body
+in development, or nowhere. A `main` that returns `void!` prints both the message and the trace when an
+error reaches it.
+
+## How it is stored
+
+The compiler emits one static, read-only record `{file, function, line}` for every place that can
+create or propagate an error. At run time the error object carries pointers to these records:
+
+| Part | Where it lives |
+|---|---|
+| creation site | one pointer in the error object |
+| the first 8 frames | inline in the error object: each frame is a site pointer plus the `?("…")` context, if any |
+| frames 9 and later | a growable array on the heap, which is rare |
+
+So one propagation step costs storing one frame record of two pointers. There is no stack walk, no
+allocation for the first 8 steps, and no debug information is needed at run time: file names and
+function names are ordinary constant strings in the binary, so traces work in stripped `--release`
+builds too.
+
+### Shared errors never change
+
+Some errors have more than one holder. A sentinel `const ErrNotFound = error("not found")` is a single
+immortal object, and an error you stored somewhere is also held by that place. Writing frames into such
+an object would change the error other code sees, so a shared error is never modified:
+
+- while it propagates, its frames go into a small **pending record** of the current thread, and `?` only
+  appends a pointer there;
+- where the propagation ends, the `try … catch` settles the record. If the handler can see the trace,
+  meaning it uses `err` in any way other than `err.Message()` and `errors.Is`, the record is attached
+  to a copy of the error. Otherwise the record is dropped, and propagating a sentinel allocates
+  nothing;
+- `?("context")` moves the record into the new wrapping error, `try … else` drops it, and an `async`
+  function attaches it before its result crosses to another thread.
+
+A copy keeps its identity: `errors.Is(err, ErrNotFound)` is true for it, as the example shows.
+
+## Turning traces off
+
+`--no-error-trace` (on `zell build` and `zell run`) removes the mechanism from the compiled code: no
+site records, no trace calls. `?("context")` still wraps the error, so messages are unchanged, but
+`errors.Trace` returns an empty string and `errors.Frames` an empty slice. Built that way, the example
+above prints only its first and last lines.
+
+Traces are on by default in both debug and release builds. Turn them off only for code that uses errors
+for control flow in a hot loop, and measure first.
+
+## What it costs
+
+The benchmark `defer_errors_iface` calls a three-level chain of functions 20M times, and 1 call in 8
+fails and is caught at the top. Go has no traces, so the fair comparisons are Zell without traces
+against Go, for the mechanism itself, and Zell with traces against Zell without, for the traces.
+
+Measured on a 4 vCPU Intel Xeon @ 2.80 GHz Firecracker VM, 2026-10-22 (`benchmarks/RESULTS-latency.md`,
+"defer_errors_iface"), times relative to Go:
+
+| Row | With traces | `--no-error-trace` |
+|---|---:|---:|
+| `error_new`: `error("odd")` created at the bottom | 1.39x | 0.81x |
+| `error_sentinel`: a constant error returned at the bottom | 5.68x | 1.18x |
+
+Without traces, errors as values cost about what Go's do. With traces, `error_new` paid about 28 ns per
+failing call. `error_sentinel` was much slower, because at the time every `return ErrOdd` copied the
+shared sentinel to give it a trace, so each failure allocated. The 16-core AMD Ryzen 7 8845HS run of
+the next day showed the same, 5.84x ("Performance wave 2", 2026-10-23).
+
+The pending record described above replaced that copy: commit `05a42f6` (2026-10-23) reports
+`error_sentinel` going from 5.67x to 2.60x Go and `error_new` from 1.93x to 1.55x, with no allocation
+on the sentinel path (`RESULTS-latency.md`, open item 3). What remains is four runtime calls per failure,
+about 4 ns each: the creation, two `?` and the catch.
+
+With zell 0.1.5 on Windows 11 (AMD Ryzen 5 8400F, 6 cores), the same benchmark ran its `error_sentinel`
+row in 69–84 ms with traces and 17.9 ms without, best of 3 each. That is about 20–26 ns per failing
+call for the trace, spread over three steps. Go was not measured on that machine.
+
+## Compared with exceptions and Go
+
+| | Exceptions (Java, C#) | Go | Zell |
+|---|---|---|---|
+| Location of the failure | full stack trace, captured at the throw | none, unless the code adds it | creation site |
+| Path to the handler | implied by the stack trace | context strings, if every caller wraps | one frame per `?`, with its context |
+| Cost at creation | stack walk, often symbolization | an allocation for `errors.New` | a pointer; nothing for a sentinel |
+| Cost per level | none, but unwinding is expensive | a branch, plus `fmt.Errorf` if wrapping | one frame record |
+| Available in release builds | yes, with metadata | n/a | yes, without debug info |
+
+A stack trace shows the stack at one moment, the throw. A return trace shows the path the error took,
+which is what you need when the error crossed tasks, was stored and returned later, or was wrapped with
+context on the way. It does not show frames the error never passed through. For panics, which are bugs
+rather than expected errors, Zell prints a full native backtrace with files and lines instead.
+
+<Callout type="go">
+In Go, an error knows where it came from only if each caller wraps it with `fmt.Errorf("…: %w", err)`.
+In Zell, `?` records its location whether or not you add context, so an unwrapped `?` still shows up in
+the trace.
+</Callout>
+
+## Next
+
+[The task scheduler](/docs/concepts/scheduler): how `await` suspends, and how workers share the run
+queues.

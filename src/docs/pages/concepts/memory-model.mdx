@@ -1,0 +1,177 @@
+Zell manages memory with reference counting, in the style of Swift and Koka's Perceus. Most of the
+counting is decided at compile time and removed. There is no tracing garbage collector: no mark phase,
+no roots to scan, no write barriers. The only collector is a bounded cycle collector that looks at
+objects of types which can form a cycle, and at nothing else. This page explains how the pieces fit
+together and what they cost. The rules you need to write programs are in
+[Memory and resources](/docs/learn/memory).
+
+## Where values live
+
+Structs, fixed arrays, tuples and numbers are values. They live in variables, on the stack or inline
+in their container, and are copied on assignment. Everything with identity lives on the heap: `new T{}`,
+slice backing arrays, maps, strings, closures, errors, values boxed into interfaces and coroutine
+frames. Each heap object starts with a 16-byte header, a reference-count word and a type pointer, and a
+`*T` points just past it, at the value itself. A non-nil `*T` always points at a whole object and owns
+one reference to it, so retain and release are always valid. Pointers into the middle of an object
+(`&s.f`, `&xs[i]`) are not counted. The compiler restricts how long they live instead, which is why
+they cannot be stored in fields or returned.
+
+**Escape analysis** keeps some of this off the heap. A `var p = new T{...}` whose `p` never escapes the
+function, and a local whose address is only passed to parameters that do not keep it, are placed in the
+function's frame with an immortal header. The program cannot tell the difference: leaving the scope
+releases the fields and runs `Drop`, as the last release would have. `async` functions do not get
+this, because their frames outlive a call.
+
+## Counting less
+
+A naive reference-counting implementation pays an increment and a decrement for every copy of a
+pointer. Zell's compiler infers ownership statically and removes most of them:
+
+| Rule | Effect |
+|---|---|
+| Parameters are borrowed | a call does not touch the count; the caller guarantees the value is alive |
+| `s += x`, `xs = append(xs, x)` take the old value by ownership | a uniquely owned string or buffer grows in place, without a copy |
+| Borrowed locals | in a function that cannot overwrite shared state, a local read from a path such as `for x in items` takes no reference |
+| Borrowed temporaries | a getter returning a field of its receiver hands it out without a retain |
+| Single-threaded mode | until a second thread starts, counts are updated with plain stores, not atomics |
+| Inline fast paths | the common retain and release are a few instructions in the caller, not a call |
+
+Values with a destructor are move-only, so ownership of a file or a socket is always unique and needs
+no count at all until you share it with `new`.
+
+The counts that remain are those where an object really has several owners.
+
+## Biased counting across threads
+
+Tasks run on several threads, so counts must be thread-safe, but atomic read-modify-write instructions
+are slow and make cores fight over cache lines. Zell uses **biased reference counting**, the scheme of
+Swift and of CPython without the GIL. An object that a thread retains becomes biased to that thread.
+Its count word is split into two parts:
+
+- **B**, the owner's part, a 16-bit half of the word that only the owning thread changes, with plain
+  stores;
+- **S**, the shared part, which every other thread changes with an atomic add that never touches B.
+
+The count is B + S. When another thread's release drives S below zero, the object is queued for its
+owner, which merges the two parts and frees the object if the sum is zero. Data that stays on one
+thread, which is most data, is counted without any atomic instruction. Tasks and objects of cyclic
+types are never biased. A task is handed to another thread on almost every `await`, so biasing it only
+creates merge work. One measurement found 91% of queued merges were task objects before tasks were
+excluded (`benchmarks/README.md`, "Object heap, biased refcounts", 4 vCPU x86-64 Firecracker VM).
+
+## The bounded cycle collector
+
+Reference counting alone cannot free a cycle: two objects pointing at each other keep each other's
+count above zero. Zell's answer has three layers.
+
+1. **Compile time.** The compiler builds a graph of which types can reference which, through pointers,
+   slices, maps, closures and the types stored in interfaces. A type in a strongly connected component
+   of that graph is *cyclic*, and the compiler warns about it (W0001) unless a `weak` reference or
+   `@allowCycle` shows the design is deliberate. `@acyclic` promises the type never forms a cycle.
+2. **Allocation.** Objects of cyclic types get a flag in their header. Nothing else does: strings,
+   slices of plain data and every object that cannot lie on a cycle never take part in collection,
+   and their counting is unchanged.
+3. **Collection.** When the count of a flagged object drops to a value other than zero, it may have
+   just become the entry point of an unreachable cycle. It is recorded once in its thread's candidate
+   buffer. When enough candidates have accumulated (4096 at first, adapting between 1024 and 4M), the
+   thread that notices runs a synchronous *trial deletion* (Bacon and Rajan). It walks the objects
+   reachable from the candidates through cyclic-typed references, subtracts the references they hold
+   to each other, and keeps alive anything that still has a count left, since that means a reference
+   from outside. What remains is garbage: weak references to it are cleared, all its `Drop`s run, then
+   it is freed.
+
+The collector never scans the stack, globals or the rest of the heap, and other threads keep running
+while it works. A mutator can only create or remove a reference by changing a count. Every count change
+on a flagged object is an atomic operation that marks the object *dirty* while a collection is running.
+So an object whose count did not change since the collector looked at it cannot have gained a new
+reference, and anything dirty is treated as alive. The scanned set is bounded by
+`ZELL_CYCLES_MAX_SCAN`, 4M objects by default; a larger collection is abandoned.
+
+Some cycles are never collected: cycles through `error` values, through tasks and coroutine frames,
+and through maps while the process has more than one thread. Break those with `weak`.
+
+<Callout type="go">
+Go's garbage collector makes the time of release unpredictable. In Zell, everything that is not on an
+unreachable cycle is freed the moment its last reference goes, so `Drop` closes files and sockets at a
+known point. Only objects of cyclic types whose cycles you did not break wait for the collector.
+</Callout>
+
+### Seeing it: `--leak-check`
+
+`zell run --leak-check` reports what is still alive at exit and names the field that closes each cycle.
+With the collector turned off, a two-object cycle looks like this (`ZELL_CYCLES=off`, zell 0.1.5):
+
+```text
+leak: 2 objects
+  2 x sessions.Session
+  cycle through Session.Peer (make one field of the cycle `weak *T` to break it)
+```
+
+In the default `auto` mode the check collects cycles once more before reporting, so whatever remains is
+a real leak.
+
+## Returning memory to the system
+
+Small objects live in 64 KB pages owned by threads. A page with no live objects goes back to a shared
+pool, and large objects get mappings of their own. Freed memory stays as a reserve up to the recent
+peak, so rebuilding the same data does not page-fault again. A background thread, which never touches
+objects, gives back to the OS whatever has been idle for 0.3 s beyond 16 MB. In a test that allocated
+540 MB and dropped it, RSS fell from 352 MB to 18 MB between 200 and 400 ms after the free (`benchmarks/README.md`,
+"Object heap, biased refcounts", 2026-10-21, 4 vCPU x86-64 Firecracker VM).
+`runtime.FreeOSMemory()` returns everything at once.
+
+## What it costs
+
+Reference counting moves the cost of memory management from pauses into the program's own work, one
+count update at a time. The measurements show both sides.
+
+**Allocation-heavy code is competitive.** `alloc_heavy`, binary trees of small nodes, ran in 0.448 s
+against Go's 0.561 s (`benchmarks/README.md`, "Memory wave results", 2026-10-21, an idle x86-64
+machine the section does not name further). Its `Node` type is
+cyclic, and the collector's bookkeeping was within noise of `ZELL_CYCLES=off` ("Cycle collector",
+2026-10-21, 4 vCPU x86-64).
+
+**Sharing objects between threads is the weak spot.** `shared_objects` has one task build 200k objects
+that 8 tasks then read, so every read touches counts that other cores also write; Go has no counts to
+touch.
+
+| Benchmark | Zell | Go | Source and machine |
+|---|---:|---:|---|
+| `shared_objects`, first measurement | 0.636 s | 0.217 s | "Memory wave results", 2026-10-21, idle x86-64 (not named further) |
+| `shared_objects`, after borrowed locals | 0.327 s | 0.226 s | "Performance pass 3", 2026-10-22, 4 vCPU x86-64, quiet best of 5 |
+| `heap_churn`, first measurement | 2.244 s | 0.976 s | "Memory wave results", 2026-10-21, idle x86-64 (not named further) |
+| `heap_churn`, after the `strings.Repeat` fix | 0.375 s | 1.170 s | "Performance pass 3", 2026-10-22, 4 vCPU x86-64, quiet best of 5 |
+
+Borrowed locals removed the six refcount operations per item in the readers' loop. The phase where 8
+threads read one thread's objects is still bound by the shared counts of those objects. `heap_churn`
+turned out to measure a slow `strings.Repeat`, not the allocator. Once that was fixed, allocating and
+dropping 40 MB per round was 3x faster than Go.
+
+**Tail latency is where ARC pays off.** `latency_p99` serves HTTP requests while a background task
+keeps replacing a large live heap (`benchmarks/RESULTS-latency.md`, 2026-10-22, 4 vCPU Intel Xeon @
+2.80 GHz, Firecracker VM):
+
+| Server | p99 idle | p99 under churn | req/s under churn |
+|---|---:|---:|---:|
+| Zell | 2 210 µs | 3 145 µs | 65 210 |
+| Go | 3 411 µs | 8 142 µs | 52 539 |
+
+Under churn, Go's p99 grew 2.4x and Zell's 1.4x. The comparison is not perfectly even: Go's background
+goroutine replaced 4.3x as much data per second (1 208 vs 281 rebuilds). Zell frees each replaced bucket
+synchronously on the task that drops it, a cost paid by that task rather than spread over request
+handlers as GC assists are.
+
+## Why not something else
+
+- **A tracing GC** handles cycles for free, but brings pauses or barriers, a larger runtime and
+  non-deterministic release of resources.
+- **Rust-style ownership** costs nothing at run time, but lifetimes and a borrow checker do not fit a
+  language meant to be as simple as Go. Zell infers what it can and counts the rest.
+- **Arenas** (`arena.New()`) are there for workloads with a clear lifetime, such as one request or one
+  parse: allocation without counts, everything freed at once. They complement reference counting
+  rather than replace it.
+
+## Next
+
+[Error return traces](/docs/concepts/error-traces): how errors record their path without unwinding the
+stack.

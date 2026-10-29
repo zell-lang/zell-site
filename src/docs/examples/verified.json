@@ -1,4 +1,8 @@
 {
+  "concepts/error-traces/trace": {
+    "zell": "0.1.5",
+    "hash": "4f56fd10"
+  },
   "errors/block": {
     "zell": "0.1.5",
     "hash": "5437bb28"

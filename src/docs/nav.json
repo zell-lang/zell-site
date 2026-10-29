@@ -313,25 +313,25 @@
         {
           "slug": "memory-model",
           "title": "Memory without a garbage collector",
-          "status": "planned",
+          "status": "draft",
           "summary": "Ownership, reference counts, biased counting and the bounded cycle collector."
         },
         {
           "slug": "error-traces",
           "title": "Error return traces",
-          "status": "planned",
+          "status": "draft",
           "summary": "How an error records its path for one pointer per step, and what it costs."
         },
         {
           "slug": "scheduler",
           "title": "The task scheduler",
-          "status": "planned",
+          "status": "draft",
           "summary": "Workers, run queues, work stealing, the poller and structured cancellation."
         },
         {
           "slug": "compilation",
           "title": "From source to binary",
-          "status": "planned",
+          "status": "draft",
           "summary": "The compiler pipeline, LLVM, the runtime, and what ends up in an executable."
         }
       ]

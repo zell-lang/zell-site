@@ -1,0 +1,30 @@
+namespace store
+
+import io
+
+const ErrNotFound = error("not found")      // a sentinel: one immortal object
+
+func lookup(key string) string! {
+    if key != "admin" {
+        return ErrNotFound                  // created at: the first return
+    }
+    return "root"
+}
+
+func owner(key string) string! {
+    return lookup(key)?                     // one frame per ?
+}
+
+func describe(key string) string! {
+    return "owner: " + owner(key)?("describe " + key)
+}
+
+func main() {
+    try describe("guest") catch err {
+        println(err)
+        for f in errors.Frames(err) {       // the same records errors.Trace prints
+            println(" ", f.Line, f.Func, f.Context)
+        }
+        println("is ErrNotFound:", errors.Is(err, ErrNotFound))
+    }
+}
