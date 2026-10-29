@@ -1,0 +1,25 @@
+namespace worker
+
+import io
+
+func average(xs []int) int {
+    var sum = 0
+    for x in xs {
+        sum += x
+    }
+    return sum / len(xs)        // panics on an empty slice
+}
+
+async func job(xs []int) int! {
+    await task.Delay(1)         // from here on, job runs in a task of its own
+    return average(xs)
+}
+
+async func main() {
+    println(try await job([2, 4, 6]) else -1)
+    try await job([]) catch err {
+        println("job failed:", errors.Is(err, task.ErrPanic))
+        println(task.PanicMessage(err))
+    }
+    println("main goes on")
+}

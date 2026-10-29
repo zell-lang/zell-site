@@ -1,0 +1,27 @@
+namespace hot
+
+import io
+
+func fib(n int) int {
+    if n < 2 {
+        return n
+    }
+    return fib(n - 1) + fib(n - 2)
+}
+
+func main() void! {
+    var path = fs.Join(fs.TempDir(), "hot-cpu.pb")
+    diag.StartCPUProfile(path)?            // start sampling the CPU
+
+    var start = time.Now()
+    var rounds = 0
+    for time.Since(start) < 300 {          // about 300 ms of work
+        _ = fib(20 + rounds % 4)
+        rounds += 1
+    }
+
+    var samples = diag.StopCPUProfile()?   // write the pprof file
+    println("samples recorded:", samples > 0)
+    println("profile written:", (try fs.Size(path) else 0) > 0)
+    fs.Remove(path)?
+}

@@ -1,0 +1,1056 @@
+The compiler reports three kinds of findings. **Errors** stop the build. **Warnings** (`W0001`) point at
+code that compiles but may not behave as you expect. **Lints** (`L0001` to `L0010`) are inspections that
+run after a successful analysis, on the typed program, so they do not guess from the text. Every message,
+snippet and output on this page comes from zell 0.1.5: each snippet was saved as `main.zl` and compiled
+with `zell check main.zl`, and the output is copied unchanged.
+
+## Reading a diagnostic
+
+A diagnostic names its level and code, then the file, line and column, the source line with the span
+underlined, and optional `note` and `help` lines:
+
+```text
+warning[L0004]: self-assignment of total
+  --> main.zl:7:5
+  |
+7 |     total = total
+  |     ^^^^^^^^^^^^^
+```
+
+Lints print as `level[code]`, with the level `warning`, `info` or `hint`. Errors print as `error:` with no
+code. A few errors carry an internal code that editors use to attach quick fixes: `E0001` unused
+variable, `E0002` unhandled `T!` result, `E0003` unused import, `E0004` unknown identifier, `E0005` the
+removed `std.` prefix, `E0100` syntax error.
+
+## Controlling lints
+
+| To | Do |
+|---|---|
+| apply the suggested fixes | `zell check --fix` (also `build` and `run`); it reports `fixed N lint finding(s) in main.zl` |
+| silence one finding | a comment `// zell:allow L0004` or `// zell:allow self-assign` on the line or the line before |
+| change a level for a package | a `[lints]` table in `zell.toml`: `L0004 = "error"` or `unused-param = "off"` |
+| turn all lints off, or into errors | `--lint=off`, `--lint=error` |
+| fail the build on any warning | `--deny-warnings` (also turns `W0001` into an error) |
+
+The levels are `error`, `warn`, `info`, `hint` and `off`. A `[lints]` table applies to the package's own
+files; dependencies are not inspected. With `L0004 = "error"` the finding above stops the build:
+
+```text
+error[L0004]: self-assignment of total
+  --> src\main.zl:7:5
+  |
+7 |     total = total
+  |     ^^^^^^^^^^^^^
+error: could not compile `app`
+```
+
+## Lints
+
+| Code | Name | Level | Finds |
+|---|---|---|---|
+| [L0001](#l0001-unreachable) | `unreachable` | warning | code after `return`, `break`, `continue` or `panic` |
+| [L0002](#l0002-shadowed-err) | `shadowed-err` | warning | an inner `err` hiding an outer one |
+| [L0003](#l0003-empty-catch) | `empty-catch` | warning | a `catch` block that does nothing |
+| [L0004](#l0004-self-assign) | `self-assign` | warning | `x = x` |
+| [L0005](#l0005-const-condition) | `const-condition` | warning | a comparison whose result is known |
+| [L0006](#l0006-unused-param) | `unused-param` | hint | a parameter the body never reads |
+| [L0007](#l0007-unused-func) | `unused-func` | warning | a private function nothing calls |
+| [L0008](#l0008-defer-in-loop) | `defer-in-loop` | info | `defer` inside a loop |
+| [L0009](#l0009-drop-capture) | `drop-capture` | warning | a type with `Drop` that keeps a closure capturing itself |
+| [L0010](#l0010-import-shadowed) | `import-shadowed` | warning | a declaration hiding a name that an import also brings |
+
+### L0001 unreachable
+
+Code after `return`, `break`, `continue` or `panic` never runs.
+
+```zell
+namespace app
+
+import io
+
+func main() {
+    println("a")
+    return
+    println("never printed")
+}
+```
+
+```text
+warning[L0001]: unreachable code
+  --> main.zl:8:5
+  |
+8 |     println("never printed")
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^
+```
+
+**Fix:** Delete the dead code (`--fix` does), or move the statement that ends the block.
+
+### L0002 shadowed-err
+
+A nested `catch err` or `var err` hides the outer `err`, so the inner block can no longer report the outer error.
+
+```zell
+namespace app
+
+import io
+
+func load() int! { return error("boom") }
+
+func main() {
+    try load() catch err {
+        try load() catch err {
+            println(err)
+        }
+        println(err)
+    }
+}
+```
+
+```text
+warning[L0002]: err shadows an outer err: the outer error can no longer be reported here
+  --> main.zl:9:26
+  |
+9 |         try load() catch err {
+  |                          ^^^
+  = note: outer err declared here (main.zl:8:22)
+```
+
+**Fix:** Rename the inner one; `--fix` renames it to `err2`.
+
+### L0003 empty-catch
+
+An empty `catch` throws the error away without a trace in the code.
+
+```zell
+namespace app
+
+import io
+
+func load() int! { return error("boom") }
+
+func main() {
+    try load() catch err {
+    }
+    println("done")
+}
+```
+
+```text
+warning[L0003]: empty catch block swallows the error
+  --> main.zl:8:26
+  |
+8 |     try load() catch err {
+  |                          ^
+  = help: handle the error, propagate it with `?`, or write `_ = ...` to discard it on purpose
+```
+
+**Fix:** Handle the error, pass it up with `?` in a function returning `T!`, or discard it on purpose with `_ = load()`. `--fix` inserts `panic(err.Message())`, which you will usually want to replace.
+
+### L0004 self-assign
+
+Assigning a variable or field to itself does nothing; usually another name was meant.
+
+```zell
+namespace app
+
+import io
+
+func main() {
+    var total = 1
+    total = total
+    println(total)
+}
+```
+
+```text
+warning[L0004]: self-assignment of total
+  --> main.zl:7:5
+  |
+7 |     total = total
+  |     ^^^^^^^^^^^^^
+```
+
+**Fix:** Assign what you meant, or delete the line (`--fix` deletes it).
+
+### L0005 const-condition
+
+Comparing two literals (`1 == 2`) or a value with itself (`x == x`) always gives the same result. Floats are exempt, since `x == x` is false for NaN.
+
+```zell
+namespace app
+
+import io
+
+func main() {
+    var n = 3
+    if n == n {
+        println(n)
+    }
+}
+```
+
+```text
+warning[L0005]: comparison of n with itself is always true
+  --> main.zl:7:8
+  |
+7 |     if n == n {
+  |        ^^^^^^
+```
+
+**Fix:** Compare what you meant; `--fix` replaces the condition with `true` or `false`.
+
+### L0006 unused-param
+
+A parameter of a private function that the body never reads. Functions used as values are exempt, since a function type fixes their signature.
+
+```zell
+namespace app
+
+import io
+
+func area(w int, h int) int {
+    return w * w
+}
+
+func main() {
+    println(area(2, 3))
+}
+```
+
+```text
+hint[L0006]: parameter h is never used
+  --> main.zl:5:18
+  |
+5 | func area(w int, h int) int {
+  |                  ^
+```
+
+**Fix:** Use the parameter, remove it, or rename it to `_` (`--fix`).
+
+### L0007 unused-func
+
+A private (lowercase) top-level function that nothing calls or refers to. `main`, `init` and functions with attributes are exempt.
+
+```zell
+namespace app
+
+import io
+
+func helper() int {
+    return 1
+}
+
+func main() {
+    println("hi")
+}
+```
+
+```text
+warning[L0007]: function helper is never used
+  --> main.zl:5:6
+  |
+5 | func helper() int {
+  |      ^^^^^^
+```
+
+**Fix:** Delete it (`--fix`), or capitalize its name to export it if other namespaces should use it.
+
+### L0008 defer-in-loop
+
+A `defer` runs when the function returns, not at the end of the iteration, so a loop over files keeps them all open until the end. A `defer` in a loop also moves every `defer` of the function to the heap.
+
+```zell
+namespace app
+
+import io
+
+func main() {
+    for name in ["a.txt", "b.txt"] {
+        defer println("closing", name)
+    }
+}
+```
+
+```text
+info[L0008]: defer in a loop runs at function exit, not at the end of each iteration
+  --> main.zl:7:9
+  |
+7 |         defer println("closing", name)
+  |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  = help: move the loop body into a function (its defers run per call), or call the cleanup directly; a defer in a loop also moves every defer of the function to the heap
+```
+
+**Fix:** Move the loop body into its own function, whose `defer` runs per call, or call the cleanup directly.
+
+### L0009 drop-capture
+
+A type with `Drop` stores, in its own field, a closure that captured `this`. The object keeps itself alive, so `Drop` never runs. It refines `W0001`, which is reported for the same type.
+
+```zell
+namespace app
+
+import io
+
+struct Timer {
+    OnTick func()
+    Ticks int
+
+    func Arm() {
+        this.OnTick = func() { this.Ticks += 1 }
+    }
+
+    func Drop() {
+        println("timer dropped")
+    }
+}
+
+func main() {
+    var t = new Timer{}
+    t.Arm()
+    println(t.Ticks)
+}
+```
+
+```text
+warning: W0001 type Timer can form a reference cycle through field OnTick (func()); consider capturing a weak *T instead, or a Drop that clears the closure
+  --> main.zl:6:5
+  |
+6 |     OnTick func()
+  |     ^^^^^^^^^^^^^
+  = help: the cycle collector frees such cycles at run time; @allowCycle on the type silences this warning
+
+warning[L0009]: Timer has Drop but stores a closure capturing this in its own field: the object keeps itself alive
+  --> main.zl:10:9
+   |
+10 |         this.OnTick = func() { this.Ticks += 1 }
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   = help: capture a weak reference to this, or clear the field before the last reference goes away
+```
+
+**Fix:** Capture a `weak` reference instead of `this`, or clear the field before the last reference goes away.
+
+### L0010 import-shadowed
+
+A declaration of your namespace has the same short name as one an import brings, here `net.ErrNotFound`. Your declaration wins; the lint marks every use of the short name.
+
+```zell
+namespace app
+
+import io
+import net
+
+const ErrNotFound = error("user not found")
+
+func find() string! {
+    return ErrNotFound
+}
+
+func main() {
+    println(try find() else "nobody", net.ErrNotFound)
+}
+```
+
+```text
+warning[L0010]: ErrNotFound is the declaration of this namespace and hides net.ErrNotFound brought in by `import net`; write net.ErrNotFound for the imported one
+  --> main.zl:9:12
+  |
+9 |     return ErrNotFound
+  |            ^^^^^^^^^^^
+```
+
+**Fix:** Rename your declaration, or keep it and write `net.ErrNotFound` where you mean the imported one.
+
+## Warnings
+
+### W0001 reference cycle
+
+A type whose fields can lead back to the type itself through strong pointers can form a reference cycle,
+which reference counting alone never frees. The run-time cycle collector frees such cycles once they
+become unreachable, so the program is correct, but the warning tells you where the collector has work to
+do. [Memory](/docs/learn/memory) has the details.
+
+```zell
+namespace app
+
+import io
+
+struct Node {
+    Name string
+    Parent *Node
+    Children []*Node
+}
+
+func main() {
+    var root = new Node{Name: "root"}
+    root.Children = append(root.Children, new Node{Name: "leaf", Parent: root})
+    println(len(root.Children))
+}
+```
+
+```text
+warning: W0001 type Node can form a reference cycle through field Parent (*Node); consider weak *Node or a Drop that breaks the cycle
+  --> main.zl:7:5
+  |
+7 |     Parent *Node
+  |     ^^^^^^^^^^^^
+  = help: the cycle collector frees such cycles at run time; @allowCycle on the type silences this warning
+```
+
+**Fix:** make the back pointer weak (`Parent weak *Node`), which removes the cycle and the collector's
+work. If the cycle is intended, put `@allowCycle` on the type to silence the warning. `--deny-warnings`
+turns `W0001` into an error.
+
+## Common errors
+
+The errors below are the most frequent ones, grouped by topic. Each `help` and `note` line is part of the
+compiler's output.
+
+### Unused names
+
+A variable that is declared and never used, and an import nothing is looked up through, are errors, as in
+Go.
+
+```zell
+namespace app
+
+func main() {
+    var count = 0
+}
+```
+
+```text
+error: unused variable count: declared and never used
+  --> main.zl:4:9
+  |
+4 |     var count = 0
+  |         ^^^^^
+  = help: use it, remove it, or rename it to `_`
+error: compilation failed
+```
+
+```zell
+namespace app
+
+import io
+import net
+
+func main() {
+    println("hi")
+}
+```
+
+```text
+error: unused import net: nothing from it is used
+  --> main.zl:4:8
+  |
+4 | import net
+  |        ^^^
+error: compilation failed
+```
+
+**Fix:** use the name or delete it. To keep a call only for its side effect, assign it to `_`.
+
+### Unknown identifiers and syntax
+
+```zell
+namespace app
+
+import io
+
+func main() {
+    var total = 3
+    println(totl)
+}
+```
+
+```text
+error: unknown identifier totl
+  --> main.zl:7:13
+  |
+7 |     println(totl)
+  |             ^^^^
+  = help: did you mean `total`?
+
+error: unused variable total: declared and never used
+  --> main.zl:6:9
+  |
+6 |     var total = 3
+  |         ^^^^^
+  = help: use it, remove it, or rename it to `_`
+error: compilation failed
+```
+
+```zell
+namespace app
+
+import io
+
+func main() {
+    var x = (1 + 2
+    println(x)
+}
+```
+
+```text
+error: expected `)`, found identifier `println`
+  --> main.zl:7:5
+  |
+7 |     println(x)
+  |     ^^^^^^^
+error: compilation failed
+```
+
+A syntax error points at the first token that cannot continue the statement, which may be on the line
+after the real mistake: here the `(` on line 6 is never closed.
+
+Namespaces of the standard library have no `std.` prefix:
+
+```zell
+namespace app
+
+import std.io
+
+func main() {
+    println("hi")
+}
+```
+
+```text
+error: unknown namespace std.io in import: the `std` namespace no longer exists: use `io` instead of `std.io`
+  --> main.zl:3:8
+  |
+3 | import std.io
+  |        ^^^^^^
+
+error: unknown identifier println
+  --> main.zl:6:5
+  |
+6 |     println("hi")
+  |     ^^^^^^^
+  = help: println is in io: add `import io`
+error: compilation failed
+```
+
+### Types
+
+Zell has no implicit conversions between types, numeric ones included.
+
+```zell
+namespace app
+
+import io
+
+func main() {
+    var n int = "42"
+    println(n)
+}
+```
+
+```text
+error: cannot assign string to variable of type int
+  --> main.zl:6:17
+  |
+6 |     var n int = "42"
+  |                 ^^^^
+error: compilation failed
+```
+
+```zell
+namespace app
+
+import io
+
+func double(x int) int { return x * 2 }
+
+func main() {
+    println(double(1.5))
+}
+```
+
+```text
+error: cannot use float as int in argument 1 of double
+  --> main.zl:8:20
+  |
+8 |     println(double(1.5))
+  |                    ^^^
+error: compilation failed
+```
+
+```zell
+namespace app
+
+import io
+
+func main() {
+    var a = 1
+    var b = 2.5
+    println(a + b)
+}
+```
+
+```text
+error: mismatched types int and float for operator +
+  --> main.zl:8:13
+  |
+8 |     println(a + b)
+  |             ^^^^^
+  = help: there are no implicit numeric conversions: convert one operand, e.g. `float(a) + b` or `a + int(b)`
+error: compilation failed
+```
+
+```zell
+namespace app
+
+import io
+
+func main() {
+    var n int = nil
+    println(n)
+}
+```
+
+```text
+error: cannot use nil as int: int is not nilable (only pointers, slices, maps, functions and interfaces can be nil)
+  --> main.zl:6:17
+  |
+6 |     var n int = nil
+  |                 ^^^
+error: compilation failed
+```
+
+```zell
+namespace app
+
+import io
+
+struct User { Name string }
+
+func main() {
+    var u = User{Name: "ann"}
+    println(u.Email)
+}
+```
+
+```text
+error: struct User has no field or method Email
+  --> main.zl:9:15
+  |
+9 |     println(u.Email)
+  |               ^^^^^
+error: compilation failed
+```
+
+```zell
+namespace app
+
+import io
+
+struct Point { X int; Y int }
+
+func main() {
+    println(Point{X: 1} == Point{X: 1})
+}
+```
+
+```text
+error: operator == is not defined on Point
+  --> main.zl:8:13
+  |
+8 |     println(Point{X: 1} == Point{X: 1})
+  |             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  = help: declare `func Equals(other Point) bool` in Point to compare with == and !=
+error: compilation failed
+```
+
+An empty literal needs its type from somewhere:
+
+```zell
+namespace app
+
+import io
+
+func main() {
+    var xs = []
+    println(len(xs))
+}
+```
+
+```text
+error: cannot infer the type of an empty slice literal; declare the variable with a type (var s []int = [])
+  --> main.zl:6:14
+  |
+6 |     var xs = []
+  |              ^^
+error: compilation failed
+```
+
+Every path through a function with a result must end in `return` or `panic`:
+
+```zell
+namespace app
+
+func sign(n int) string {
+    if n < 0 {
+        return "negative"
+    } else if n > 0 {
+        return "positive"
+    }
+}
+
+func main() {
+    _ = sign(1)
+}
+```
+
+```text
+error: missing return at end of function sign returning string
+  --> main.zl:9:1
+  |
+9 | }
+  | ^
+  = note: every path must end in return or panic (an if needs an else; a switch needs a default) (main.zl:3:6)
+error: compilation failed
+```
+
+### Errors, `?` and `try`
+
+A `T!` result has to be dealt with ([errors](/docs/learn/errors)):
+
+```zell
+namespace app
+
+import io
+
+func parse(s string) int! {
+    return strconv.Atoi(s)?
+}
+
+func main() {
+    var n = parse("42")
+    println(n)
+}
+```
+
+```text
+error: result of type int! must be handled (use ?, try ... catch, try ... else, or `_ =`)
+  --> main.zl:10:13
+   |
+10 |     var n = parse("42")
+   |             ^^^^^^^^^^^
+   = help: handle it with `try ... catch err { ... }` or `try ... else <fallback>` (`?` needs a function returning T!)
+error: compilation failed
+```
+
+```zell
+namespace app
+
+func save() void! {
+    return error("disk full")
+}
+
+func main() {
+    save()
+}
+```
+
+```text
+error: result of type void! must be handled (use ?, try ... catch, try ... else, or `_ =`)
+  --> main.zl:8:5
+  |
+8 |     save()
+  |     ^^^^^^
+  = help: handle it with `try ... catch err { ... }` or `try ... else <fallback>` (`?` needs a function returning T!)
+error: compilation failed
+```
+
+`?` passes an error up, so it needs a function that can return one:
+
+```zell
+namespace app
+
+import io
+
+func main() {
+    var n = strconv.Atoi("42")?
+    println(n)
+}
+```
+
+```text
+error: ? outside of fallible function: main does not return a T! type
+  --> main.zl:6:13
+  |
+6 |     var n = strconv.Atoi("42")?
+  |             ^^^^^^^^^^^^^^^^^^^
+  = help: handle the error here with `try ... catch` or `try ... else`, or declare main with a fallible result (`T!` / `void!`)
+error: compilation failed
+```
+
+`?` and `try` apply only to an expression that can fail:
+
+```zell
+namespace app
+
+func size() int { return 3 }
+
+func main() void! {
+    var n = size()?
+    _ = n
+}
+```
+
+```text
+error: ? requires a fallible (T!) operand, found int
+  --> main.zl:6:13
+  |
+6 |     var n = size()?
+  |             ^^^^^^
+  = help: remove the `?`: this expression cannot fail
+error: compilation failed
+```
+
+```zell
+namespace app
+
+import io
+
+func size() int { return 3 }
+
+func main() {
+    println(try size() else 0)
+}
+```
+
+```text
+error: try requires a fallible (T!) expression, found int
+  --> main.zl:8:17
+  |
+8 |     println(try size() else 0)
+  |                 ^^^^^^
+  = help: remove `try`: this expression cannot fail
+error: compilation failed
+```
+
+When the value of `try` is used, the `catch` block must leave, or the variable would have no value:
+
+```zell
+namespace app
+
+import io
+
+func main() {
+    var n = try strconv.Atoi("x") catch err {
+        println("bad number:", err)
+    }
+    println(n)
+}
+```
+
+```text
+error: catch block must return (or break, continue, panic) when the value of try is used; otherwise the variable would be uninitialized
+  --> main.zl:6:45
+  |
+6 |     var n = try strconv.Atoi("x") catch err {
+  |                                             ^
+error: compilation failed
+```
+
+### Ownership
+
+A struct with a `Drop` method owns a resource, so it cannot be copied:
+
+```zell
+namespace app
+
+import io
+
+struct File {
+    name string
+    func Drop() { println("closing", this.name) }
+}
+
+func main() {
+    var a = File{name: "log.txt"}
+    var b = a
+    println(b.name)
+}
+```
+
+```text
+error: cannot copy a value of type File: it has a destructor (Drop), so it is move-only
+  --> main.zl:12:13
+   |
+12 |     var b = a
+   |             ^
+   = note: create it in place (var x = T{...}, a function result) and share it through a pointer (&x or new T{...})
+error: compilation failed
+```
+
+A pointer into the middle of another object (`&l.From`, `&xs[i]`) may be used locally but not stored or
+returned ([memory](/docs/learn/memory)):
+
+```zell
+namespace app
+
+struct Point { X int; Y int }
+struct Line { From Point; To Point }
+
+func start(l *Line) *Point {
+    var p = &l.From
+    return p
+}
+
+func main() {
+    var l = new Line{}
+    _ = start(l)
+}
+```
+
+```text
+error: cannot keep interior pointer variable `p` elsewhere: it points into another object, so it can only be dereferenced, compared, reassigned or passed to a parameter that does not escape
+  --> main.zl:8:12
+  |
+8 |     return p
+  |            ^
+  = note: store it only in local interior pointer variables; use `new` (or a pointer field) to share the value
+error: compilation failed
+```
+
+```zell
+namespace app
+
+import io
+
+struct Counter {
+    n int
+    func Inc() { this.n += 1 }
+}
+
+struct Stats { Hits Counter }
+
+func main() {
+    var s = Stats{}
+    var inc = s.Hits.Inc
+    inc()
+    println(s.Hits.n)
+}
+```
+
+```text
+error: cannot take the method value Inc of a struct field or element (it would keep an interior pointer)
+  --> main.zl:14:22
+   |
+14 |     var inc = s.Hits.Inc
+   |                      ^^^
+   = help: take it of a pointer or a variable, or write a lambda: `() => x.f.M()`
+error: compilation failed
+```
+
+### Async
+
+```zell
+namespace app
+
+import io
+
+async func fetch() int {
+    return 42
+}
+
+func main() {
+    var n = await fetch()
+    println(n)
+}
+```
+
+```text
+error: await outside async function: main is not declared async
+  --> main.zl:10:13
+   |
+10 |     var n = await fetch()
+   |             ^^^^^^^^^^^^^
+   = help: declare it as `async func main(...)`; callers then await it too
+error: compilation failed
+```
+
+```zell
+namespace app
+
+import io
+
+async func flush() {
+}
+
+func main() {
+    defer await flush()
+    println("done")
+}
+```
+
+```text
+error: defer await outside async function: main is not declared async
+  --> main.zl:9:11
+  |
+9 |     defer await flush()
+  |           ^^^^^^^^^^^^^
+  = help: declare it as `async func main(...)`, or defer a synchronous call
+error: compilation failed
+```
+
+Calling an async function without `await` gives a `Task`, not its result:
+
+```zell
+namespace app
+
+import io
+
+async func fetch() int {
+    return 42
+}
+
+async func main() {
+    var n int = fetch()
+    println(n)
+}
+```
+
+```text
+error: cannot assign Task<int> to variable of type int
+  --> main.zl:10:17
+   |
+10 |     var n int = fetch()
+   |                 ^^^^^^^
+error: compilation failed
+```
+
+```zell
+namespace app
+
+import io
+
+async func fetch() int! {
+    return 42
+}
+
+async func main() void! {
+    var n = fetch()?
+    println(n)
+}
+```
+
+```text
+error: ? requires a fallible (T!) operand, found Task<int!>
+  --> main.zl:10:13
+   |
+10 |     var n = fetch()?
+   |             ^^^^^^^
+   = help: remove the `?`: this expression cannot fail
+error: compilation failed
+```
+
+The `help` line of the last one is misleading in 0.1.5: the fix is `await fetch()?`, not removing the `?`.
+
+## Next
+
+- [Debug and profile](/docs/guides/debugging): when the program compiles but misbehaves.
+- [Errors](/docs/learn/errors) and [memory](/docs/learn/memory): the rules behind most of the errors above.

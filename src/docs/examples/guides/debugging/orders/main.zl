@@ -1,0 +1,22 @@
+namespace orders
+
+import io
+
+struct Line {
+    Sku string
+    Qty int
+    Cents int
+}
+
+func total(lines []Line) int {
+    var sum = 0
+    for l in lines {
+        sum += l.Qty * l.Cents
+    }
+    return sum
+}
+
+func main() {
+    var lines = [Line{Sku: "pen", Qty: 2, Cents: 150}, Line{Sku: "pad", Qty: 1, Cents: 400}]
+    println(total(lines))
+}

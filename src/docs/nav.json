@@ -257,7 +257,7 @@
         {
           "slug": "debugging",
           "title": "Debug and profile",
-          "status": "planned",
+          "status": "draft",
           "summary": "lldb and gdb with pretty-printers, panics and backtraces, CPU profiles, leak checks."
         }
       ]
@@ -294,7 +294,7 @@
         {
           "slug": "diagnostics",
           "title": "Compiler diagnostics",
-          "status": "planned",
+          "status": "draft",
           "summary": "Every error and lint code with an example and the fix."
         },
         {

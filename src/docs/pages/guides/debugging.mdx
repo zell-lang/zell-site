@@ -1,0 +1,274 @@
+By the end of this guide you will know where to look when a Zell program misbehaves: what a panic tells
+you and how to contain one, how to stop a program at a line and inspect it with `zell debug`, how to use
+lldb or gdb, how to find leaks, and how to see where the CPU time goes. The order is roughly from the
+quickest tool to the most thorough.
+
+Every command output below was copied from a real run of zell 0.1.5 on Windows unless it says otherwise;
+long absolute paths are shortened to `…`.
+
+## Step 1: read the panic
+
+An error that a caller should handle is a `T!` (see [errors](/docs/learn/errors) for error traces). A
+*panic* is a programming mistake: an index out of range, a `nil` dereference, division by zero,
+`panic(msg)`. It prints `panic:` and a backtrace with the file and line of every Zell frame, then exits
+with status 2. Saved as `crash.zl` and run with `zell run crash.zl`:
+
+```zell
+namespace report
+
+import io
+
+func pick(names []string, i int) string {
+    return names[i]
+}
+
+func main() {
+    var names = ["ann", "bob", "cid"]
+    println(pick(names, 1))
+    println(pick(names, 5))
+}
+```
+
+```text
+bob
+panic: runtime error: index out of range [5] with length 3
+
+backtrace (most recent call first):
+  crash.zl:6 pick
+  crash.zl:12 main
+prog.exe(main+0x3e) [0x7ff7b96f1d2e]
+prog.exe(__tmainCRTStartup+0x177) [0x7ff7b96b1307]
+prog.exe(mainCRTStartup+0x1a) [0x7ff7b96b142a]
+KERNEL32.DLL(BaseThreadInitThunk+0x17) [0x7ffb6e81dda7]
+ntdll.dll(RtlUserThreadStart+0x2c) [0x7ffb7039ee4c]
+```
+
+The `file:line function` frames come from a small line table the compiler links into every executable,
+so they survive `--release` and `strip`, and the format is the same on Linux, macOS and Windows. Frames
+outside Zell code keep the `module(symbol+offset)` form. In an optimized build a small function that was
+inlined has no frame of its own. Set `ZELL_NO_BACKTRACE=1` to print only the `panic:` line, which is
+handy for tests that compare output.
+
+### Panics stay inside their task
+
+A panic ends the *task* it happens in, not necessarily the program. Deferred calls in the task's frames
+run on the way out. Whoever awaits the task finds out: awaiting a `Task<T!>` gives an error that
+`errors.Is(err, task.ErrPanic)` recognizes, and `task.PanicMessage` and `task.PanicTrace` return the
+message and the backtrace.
+
+<Example id="guides/debugging/panic-task" />
+
+Awaiting a task without `!` panics again in the awaiting task. A panic in a task nobody awaits is printed
+to stderr and the program continues. A panic in `main` itself, or in synchronous code outside any task,
+ends the process with status 2, as above.
+
+A real crash is different: a stack overflow, or a bad address in C code. It prints
+`fatal error: unexpected signal SIGSEGV` with the same kind of backtrace, runs no `defer`, and ends the
+process. `ZELL_NO_FATAL_HANDLER=1` turns the handler off so the OS can write a core dump.
+
+## Step 2: stop at a line with `zell debug run`
+
+Every debug build (any `zell build` or `zell run` without `--release`) links a small debug agent into the
+program. `zell debug run` builds the program and opens a gdb-style prompt on top of it. Take this program:
+
+<Example id="guides/debugging/orders" />
+
+Stop in `total` only when the line being added is the pad, look around, change `sum`, and continue. The
+program then prints 400 instead of 700:
+
+```text
+$ zell debug run main.zl
+zell debug: set breakpoints, then `c` to start the program (help: h)
+(zell) b main.zl:14 if l.Sku == "pad"
+breakpoint 1 at …\main.zl:14
+(zell) c
+stopped (breakpoint) in task 1 at orders.total (main.zl:14)
+   14	        sum += l.Qty * l.Cents
+(zell) p sum
+sum = 300
+(zell) locals
+lines: []Line = len 2, cap 2: [Line{Sku: "pen", Qty: 2, Cents: 150} Line{Sku: "pad", Qty: 1, Cents: 400}]
+sum: int = 300
+l: Line = Line{Sku: "pad", Qty: 1, Cents: 400}
+(zell) bt
+* #0 orders.total (main.zl:14)
+  #1 orders.main (main.zl:21)
+(zell) set sum = 0
+sum = 0
+(zell) c
+[program exited with code 0]
+400
+```
+
+| Command | Does |
+|---|---|
+| `b file:line [if cond]`, `b func` | set a breakpoint, optionally conditional |
+| `log file:line text {expr}` | a logpoint: print without stopping |
+| `c`, `n`, `s`, `o` | continue, next line, step in, step out |
+| `p expr`, `locals`, `set x = v` | print a value, all locals, change a scalar |
+| `bt`, `up`, `down` | the stack, and moving along it |
+| `tasks`, `task N` | list the tasks, switch to one |
+| `catch panic`, `catch error [Type]` | stop where a panic happens or an error is created |
+| `q` | quit |
+
+Conditions and logpoint expressions run inside the program, so a conditional breakpoint on a hot line
+costs little. They support variable paths (`a.b[2].c`, `m["key"]`), `len(x)`, literals, comparisons and
+`&&`, `||`, `!`, but no arithmetic or calls. `catch panic` stops before the task unwinds, so the
+variables are still there:
+
+```text
+(zell) catch panic
+(zell) c
+stopped (exception: panic: runtime error: index out of range [5] with length 3) in task 1 at report.pick (crash.zl:6)
+    6	    return names[i]
+(zell) p i
+i = 5
+```
+
+`n` steps over an `await` and stays in the same task, even when the function was suspended and resumed
+on another thread.
+
+The agent has a price in debug builds: its hooks make unoptimized code slower even with no debugger
+attached (about 1.5 times for a recursive `fib`). A `--release` build has no agent unless you add
+`--debug-agent`; then each function has a second, instrumented copy that runs only while a debugger is
+attached, so the normal speed is unchanged, and you get the stack and lines but not variables.
+
+## Step 3: debug from an editor or attach to a running program
+
+In VS Code, **F5** on a `.zl` file builds it and starts it under the agent; [Set up an
+editor](/docs/get-started/editors#debugging) has the details. To debug a program that is already running,
+start it with the agent listening on a port:
+
+```sh
+ZELL_DEBUG=127.0.0.1:2345 ./app          # ",wait" after the port holds main until a client connects
+zell debug attach :2345                  # or the VS Code "Attach to agent" configuration
+```
+
+The program prints `zell-debug: listening on 127.0.0.1:2345` on stderr; port `0` picks a free one.
+`zell debug run --headless --port 2345` builds and starts the program for an editor to attach, and
+`zell test --debug` runs the selected tests in one process under the agent.
+
+## Step 4: lldb and gdb
+
+For core dumps, C code in your program, or when you prefer a native debugger, debug builds carry DWARF
+debug information (`--release -g` adds it to an optimized build). `zell debug` builds the program and
+starts lldb, or gdb with `--gdb`, with Zell's formatters loaded:
+
+```sh
+zell debug app.zl              # lldb
+zell debug --gdb app.zl        # gdb
+zell debug --formatters lldb   # print the path of the formatter script, to load it yourself
+```
+
+The formatters show strings as text, slices and maps as their elements, `T!` as the value or
+`error: …`, enums as the variant name with its fields, and interfaces with their dynamic type. Their
+`zell-rc <expr>` command decodes the reference count of the object a value points at. In lldb, `next`
+over an `await` that suspends leaves the coroutine; the `zell-next` command steps to the next line of the
+same coroutine instead. Expressions use C syntax: `v nums[1]` works through the formatters, `p nums[1]`
+does not.
+
+<Callout type="note">
+This Windows machine has neither lldb nor gdb, so this step is described from the toolchain's
+documentation, not from a run. `zell debug` without them answers `error: cannot start the debugger:
+program not found`; `zell debug run` needs neither.
+</Callout>
+
+## Step 5: find leaks
+
+Reference counting frees an object when the last reference goes away, which a cycle of references
+prevents. The compiler warns about types that can form one (warning `W0001`, see
+[diagnostics](/docs/reference/diagnostics)), and at run time a cycle collector frees the cycles that
+become unreachable. `--leak-check` reports what is still alive when the program exits and exits with
+status 66. To see the cycles the collector would otherwise clean up, turn it off with
+`ZELL_CYCLES=manual`:
+
+```zell
+namespace sessions
+
+import io
+
+struct User {
+    Name string
+    Current *Session
+}
+
+struct Session {
+    Id int
+    Owner *User          // User -> Session -> User: a cycle
+}
+
+func login(name string, id int) *User {
+    var u = new User{Name: name}
+    u.Current = new Session{Id: id, Owner: u}
+    return u
+}
+
+func main() {
+    var u = login("ann", 1)
+    println(u.Current.Owner.Name)
+}
+```
+
+The compiler's two `W0001` warnings are left out of this output:
+
+```text
+$ ZELL_CYCLES=manual zell run --leak-check leak.zl
+ann
+leak: 2 objects
+  1 x sessions.Session
+  1 x sessions.User
+  cycle through User.Current (make one field of the cycle `weak *T` to break it)
+  cycle through Session.Owner (make one field of the cycle `weak *T` to break it)
+  2 of them in unreachable reference cycles the cycle collector can free (ZELL_CYCLES=auto or runtime.CollectCycles())
+```
+
+With the default collector the same run reports nothing. Making `Owner` a `weak *User` removes the cycle,
+the warning and the work for the collector; [memory](/docs/learn/memory) explains the trade-off. What
+`--leak-check` reports with the collector on is memory nothing will ever free: objects held by a global,
+by a task that never finished, or by a cycle through an `error`. In production, without `--leak-check`,
+`ZELL_DIAG_HEAP=1` enables per-type counters of live objects, served by `diag.ServeHeap`; a type whose
+count keeps growing is the leak.
+
+## Step 6: profile the CPU
+
+`diag.StartCPUProfile(path)` starts sampling the running program and `diag.StopCPUProfile()` writes a
+profile in pprof format:
+
+<Example id="guides/debugging/profile" />
+
+Read it with `zell tool pprof`, which runs `go tool pprof` (Go must be installed). With the file kept
+instead of removed, and the output trimmed to the interesting lines:
+
+```text
+$ zell tool pprof -top cpu.pb
+Type: cpu
+Duration: 499.36ms, Total samples = 430ms (86.11%)
+      flat  flat%   sum%        cum   cum%
+     430ms   100%   100%      430ms   100%  hot.fib
+         0     0%   100%      430ms   100%  hot.main
+```
+
+That run was a debug build. Any pprof viewer works with the file, including `go tool pprof -http=:8080`
+for a flame graph in the browser.
+
+## Environment variables for debugging
+
+| Variable | Effect |
+|---|---|
+| `ZELL_NO_BACKTRACE=1` | a panic prints only its `panic:` line |
+| `ZELL_NO_LINES=1` | backtraces show `symbol+offset` instead of `file:line` |
+| `ZELL_NO_FATAL_HANDLER=1` | no handler for real crashes, so the OS default (a core dump) applies |
+| `ZELL_DEBUG=[host]:port[,wait]` | start the debug agent before `main` |
+| `ZELL_CYCLES=auto\|manual\|off` | the cycle collector: automatic (default), only `runtime.CollectCycles()`, or none |
+| `ZELL_DIAG_HEAP=1` | per-type live object counters for `diag.HeapByType` and `/debug/heap` |
+| `ZELL_NO_SLAB=1` | allocate every object with `malloc`, so Valgrind or a sanitizer sees each one |
+| `ZELL_WORKERS=n` | the number of scheduler threads; `1` makes task interleavings easier to follow |
+| `ZELL_TEST_PANICS=process` | `testing.Panics` runs the code in a child process |
+
+To see what the compiler made of your code, `zell check --dump-hir app.zl` prints the typed program after
+semantic analysis, and `zell build app.zl --emit=llvm-ir` the LLVM IR.
+
+## Next
+
+- [Compiler diagnostics](/docs/reference/diagnostics): every warning and lint code, with the fix.
+- [Testing](/docs/learn/testing): catch the bug in a test before you need the debugger.

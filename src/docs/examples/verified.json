@@ -315,6 +315,18 @@
     "zell": "0.1.5",
     "hash": "c36d2cec"
   },
+  "guides/debugging/orders": {
+    "zell": "0.1.5",
+    "hash": "73bbc3b1"
+  },
+  "guides/debugging/panic-task": {
+    "zell": "0.1.5",
+    "hash": "7c0af973"
+  },
+  "guides/debugging/profile": {
+    "zell": "0.1.5",
+    "hash": "5481c761"
+  },
   "guides/http-service/app": {
     "zell": "0.1.5",
     "hash": "c4ae9dab"
