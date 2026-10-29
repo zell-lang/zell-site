@@ -1,0 +1,10 @@
+namespace paths
+
+// Compiled only for Linux targets.
+func configDir() string {
+    var xdg = os.Getenv("XDG_CONFIG_HOME")
+    if xdg != "" {
+        return fs.Join(xdg, "wordfreq")
+    }
+    return fs.Join(os.Getenv("HOME"), ".config/wordfreq")
+}

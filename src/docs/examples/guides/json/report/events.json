@@ -1,0 +1,18 @@
+[
+  {"type": "order.created", "at": "2026-10-01T09:30:00Z",
+   "data": {"id": 101, "customer": {"email": "ann@example.com", "name": "Ann Lee"},
+            "items": [{"sku": "MUG-1", "qty": 2, "price_cents": 1250},
+                      {"sku": "TEA-7", "qty": 1, "price_cents": 899}],
+            "note": "gift wrap"}},
+  {"type": "order.created", "at": "2026-10-01T10:05:00Z",
+   "data": {"id": 102, "customer": {"email": "bob@example.com"},
+            "items": [{"sku": "MUG-1", "qty": 1, "price_cents": 1250}],
+            "note": null}},
+  {"type": "order.refunded", "at": "2026-10-02T08:00:00Z",
+   "data": {"order_id": 101, "amount_cents": 899, "reason": "damaged"}},
+  {"type": "order.created", "at": "2026-10-02T11:00:00Z",
+   "data": {"id": "103", "customer": {"email": "cy@example.com"}, "items": []}},
+  {"type": "order.created", "at": "2026-10-03T12:00:00Z",
+   "data": {"id": 104, "customer": {"email": ""}, "items": [{"sku": "TEA-7", "qty": 3, "price_cents": 899}]}},
+  {"type": "customer.updated", "at": "2026-10-03T13:00:00Z", "data": {"id": 9}}
+]

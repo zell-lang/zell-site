@@ -1,0 +1,43 @@
+namespace importer
+
+import encoding
+import io
+
+struct Refund {
+    @json(name: "order_id") OrderId int
+    @json(name: "amount_cents") AmountCents int
+}
+
+// The payload stays a json.Value until the type says what it is.
+struct Event {
+    @json(name: "type") Type string
+    @json(name: "at") At time.Time
+    @json(name: "data") Data json.Value
+}
+
+const Input = `[
+    {"type": "order.refunded", "at": "2026-10-02T08:00:00Z",
+     "data": {"order_id": 101, "amount_cents": 899}},
+    {"type": "customer.updated", "at": "2026-10-03T13:00:00Z",
+     "data": {"id": 9, "tags": ["vip", "beta"]}}
+]`
+
+func main() void! {
+    for e in json.Parse<[]Event>(Input)? {
+        switch e.Type {
+            case "order.refunded":
+                var r = json.Decode<Refund>(e.Data)?
+                println(e.At.Format(time.RFC3339), "refund", r.AmountCents, "for", r.OrderId)
+            default:
+                // Unknown payloads can still be inspected without a struct.
+                println(e.Type, e.Data.Type(), e.Data.Keys(), e.Data.Get("tags").Len())
+        }
+    }
+
+    // Build a value without a struct, then format it.
+    var ack = json.NewObject(
+        ["ok", "processed"],
+        [json.NewBool(true), json.NewNumber(2)],
+    )?
+    println(ack.Format())
+}

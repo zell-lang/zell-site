@@ -20,7 +20,7 @@
         {
           "slug": "editors",
           "title": "Set up an editor",
-          "status": "planned",
+          "status": "draft",
           "summary": "The language server in VS Code, IntelliJ, Neovim and Helix: completion, refactorings, debugging."
         }
       ]
@@ -227,7 +227,7 @@
         {
           "slug": "cli-tool",
           "title": "Build a command-line tool",
-          "status": "planned",
+          "status": "draft",
           "summary": "Flags, reading files, exit codes, and shipping one binary per platform."
         },
         {
@@ -239,7 +239,7 @@
         {
           "slug": "json",
           "title": "Work with JSON",
-          "status": "planned",
+          "status": "draft",
           "summary": "Typed parsing and formatting, attributes, and schema-less values."
         },
         {
@@ -251,7 +251,7 @@
         {
           "slug": "cross-compile",
           "title": "Cross-compile and release",
-          "status": "planned",
+          "status": "draft",
           "summary": "Targets, static musl builds, Windows and macOS binaries from any host."
         },
         {

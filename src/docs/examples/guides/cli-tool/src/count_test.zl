@@ -1,0 +1,19 @@
+namespace wordfreq
+
+@test func TestCountTrimsPunctuation(t *testing.T) {
+    var counts = Count("Cat, cat! (cat)", Options{MinLength: 1})
+    testing.Equal(t, counts["cat"], 2)
+    testing.Equal(t, counts["Cat"], 1)
+}
+
+@test func TestCountOptions(t *testing.T) {
+    var counts = Count("A cat is a Cat", Options{IgnoreCase: true, MinLength: 2})
+    testing.Equal(t, counts["cat"], 2)
+    testing.Equal(t, len(counts), 2)   // "a" is too short
+}
+
+@test func TestTopBreaksTiesAlphabetically(t *testing.T) {
+    var top = Top(map[string]int{"b": 2, "a": 2, "c": 5, "d": 1}, 3)
+    var words = slices.Map(top, e => e.Word)
+    testing.EqualSlices(t, words, ["c", "a", "b"])
+}

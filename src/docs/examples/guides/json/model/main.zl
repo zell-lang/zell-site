@@ -1,0 +1,39 @@
+namespace importer
+
+import encoding
+import io
+
+struct Customer {
+    @json(name: "email") Email string
+    @json(name: "name", omitEmpty: true) Name string
+}
+
+struct Item {
+    @json(name: "sku") Sku string
+    @json(name: "qty") Qty int
+    @json(name: "price_cents") PriceCents int
+}
+
+struct Order {
+    @json(name: "id") Id int
+    @json(name: "customer") Customer Customer
+    @json(name: "items") Items []Item
+    @json(name: "note") Note *string            // null or missing: nil
+}
+
+const Input = `{
+    "id": 102,
+    "customer": {"email": "bob@example.com"},
+    "items": [{"sku": "MUG-1", "qty": 2, "price_cents": 1250}],
+    "note": null,
+    "channel": "web"
+}`
+
+func main() void! {
+    var o = json.Parse<Order>(Input)?
+    println(o.Id, o.Customer.Email, len(o.Items), o.Items[0].Qty, o.Note == nil)
+
+    var note = "leave at the door"
+    o.Note = &note
+    println(json.Format(o))
+}

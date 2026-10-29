@@ -76,3 +76,6 @@ your report instead. Do not commit, push or deploy: the maintainer checks everyt
   compiler rejects it and then reports follow-on errors that hide the first one. Pick another name.
 - Examples must not depend on map iteration order or on task scheduling: sort keys
   (`maps.SortedKeys`), and run async examples several times before trusting their output.
+- `zell build -o name` does not add `.exe` for Windows targets; say so when showing `-o`.
+- `zell run .` leaves `target/` (and `zell.lock`) in a package example directory. Both are
+  git-ignored, but delete `target/` when you are done.

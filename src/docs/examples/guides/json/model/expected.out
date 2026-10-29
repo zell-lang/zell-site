@@ -1,0 +1,2 @@
+102 bob@example.com 1 2 true
+{"id":102,"customer":{"email":"bob@example.com"},"items":[{"sku":"MUG-1","qty":2,"price_cents":1250}],"note":"leave at the door"}

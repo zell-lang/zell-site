@@ -1,0 +1,82 @@
+namespace importer
+
+import encoding
+import io
+
+struct Customer {
+    @json(name: "email") Email string
+    @json(name: "name", omitEmpty: true) Name string
+}
+
+struct Item {
+    @json(name: "sku") Sku string
+    @json(name: "qty") Qty int
+    @json(name: "price_cents") PriceCents int
+}
+
+struct Order {
+    @json(name: "id") Id int
+    @json(name: "customer") Customer Customer
+    @json(name: "items") Items []Item
+    @json(name: "note") Note *string            // null or missing: nil
+}
+
+struct Refund {
+    @json(name: "order_id") OrderId int
+    @json(name: "amount_cents") AmountCents int
+}
+
+// The envelope: the payload stays undecoded until the type is known.
+struct Event {
+    @json(name: "type") Type string
+    @json(name: "at") At time.Time
+    @json(name: "data") Data json.Value
+}
+
+struct Report {
+    @json(name: "orders") Orders int
+    @json(name: "revenue_cents") RevenueCents int
+    @json(name: "units_by_sku") UnitsBySku map[string]int
+    @json(name: "rejected", omitEmpty: true) Rejected []string
+    @json(name: "skipped_types", omitEmpty: true) Skipped []string
+}
+
+func validate(o Order) void! {
+    if o.Customer.Email == "" {
+        return error("customer.email: required")
+    }
+    if len(o.Items) == 0 {
+        return error("items: at least one item required")
+    }
+}
+
+func apply(r *Report, e Event) void! {
+    switch e.Type {
+        case "order.created":
+            var o = json.Decode<Order>(e.Data)?
+            validate(o)?
+            r.Orders += 1
+            for it in o.Items {
+                r.RevenueCents += it.Qty * it.PriceCents
+                r.UnitsBySku[it.Sku] += it.Qty
+            }
+        case "order.refunded":
+            var f = json.Decode<Refund>(e.Data)?
+            r.RevenueCents -= f.AmountCents
+        default:
+            r.Skipped = append(r.Skipped, e.Type)
+    }
+}
+
+func main() void! {
+    var text = io.ReadFile("events.json")?
+    var events = json.Parse<[]Event>(text)?("events.json")
+
+    var report = Report{UnitsBySku: map[string]int{}}
+    for i, e in events {
+        try apply(&report, e) catch err {
+            report.Rejected = append(report.Rejected, fmt.Format("event {0} ({1}): {2}", i, e.Type, err))
+        }
+    }
+    println(json.FormatIndent(report, "", "  "))
+}

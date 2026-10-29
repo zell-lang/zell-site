@@ -1,0 +1,16 @@
+namespace paths
+
+import io
+
+func main() {
+    var file = fs.Join(configDir(), "settings.toml")
+    // The full path differs per OS; the file name does not.
+    println(fs.Base(file))
+    println(lineEnding() == os.LineSeparator)
+}
+
+@cfg(os: "windows")
+func lineEnding() string { return "\r\n" }
+
+@cfg(not(os: "windows"))
+func lineEnding() string { return "\n" }

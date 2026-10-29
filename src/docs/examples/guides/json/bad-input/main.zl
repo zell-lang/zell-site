@@ -1,0 +1,41 @@
+namespace importer
+
+import encoding
+import io
+
+struct Item {
+    @json(name: "sku") Sku string
+    @json(name: "qty") Qty int
+}
+
+struct Order {
+    @json(name: "id") Id int
+    @json(name: "email") Email string
+    @json(name: "items") Items []Item
+}
+
+// Parse checks types; rules about values are yours to check after it.
+func parseOrder(text string) Order! {
+    var o = json.Parse<Order>(text)?("order")
+    if o.Email == "" {
+        return error("order: email: required")
+    }
+    return o
+}
+
+func main() {
+    var inputs = [
+        `{"id": 1, "email": "ann@example.com", "items": [{"sku": "A", "qty": 2}]}`,
+        `{"id": 2, "email": "bob@example.com", "items": [{"sku": "A", "qty": 1}, {"sku": "B", "qty": "3"}]}`,
+        `{"id": 3, "items": []}`,
+        `{"id": 4, "email": "cy@example.com", "items": [}`,
+        `{"id": 5.5}`,
+    ]
+    for text in inputs {
+        var o = try parseOrder(text) catch err {
+            println("rejected:", err)
+            continue
+        }
+        println("accepted:", o.Id, len(o.Items))
+    }
+}

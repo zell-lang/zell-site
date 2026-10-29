@@ -1,0 +1,5 @@
+[package]
+name = "paths"
+version = "0.1.0"
+namespace = "paths"
+entry = "src/main.zl"

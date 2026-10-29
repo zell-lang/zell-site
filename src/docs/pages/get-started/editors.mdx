@@ -1,0 +1,177 @@
+Zell ships one language server, `zell-lsp`, and every editor talks to it. It sits in the toolchain's
+`bin/` directory next to `zell`, so once the toolchain is on your `PATH` there is nothing else to install
+on the server side:
+
+```sh
+zell-lsp --version        # zell-lsp 0.1.5
+```
+
+This page sets up VS Code, the JetBrains IDEs, Neovim and Helix, then lists what the server does and how
+to debug from the editor.
+
+## VS Code
+
+The extension adds syntax highlighting, starts `zell-lsp`, and contributes run and debug commands. It is
+not on the Marketplace yet. Its sources come with the toolchain in `tools/vscode`, and you build the
+`.vsix` package from them once (Node.js 18 or newer):
+
+```sh
+cd ~/.zell/toolchain/zell-0.1.5-<host>/tools/vscode
+npm install
+npx @vscode/vsce package
+code --install-extension zell-*.vsix
+```
+
+On Windows the toolchain lives in `%USERPROFILE%\.zell\toolchain`. Open a folder with `.zl` files and the
+server starts; its log is under **Output → Zell**, and the status bar shows whether analysis is running.
+
+The extension looks for the server in this order: the `zell.serverPath` setting, `zell-lsp` on `PATH`,
+`zell-lsp` next to the `zell` found on `PATH`, and finally `zell lsp`. Settings you are likely to touch:
+
+| Setting | Default | Meaning |
+|---|---|---|
+| `zell.serverPath` | `zell-lsp` | server executable; a path to `zell` runs `zell lsp` |
+| `zell.inlayHints.types.enabled` | `true` | inferred types after `var x = …` and loop variables |
+| `zell.inlayHints.parameterNames.enabled` | `true` | parameter names before literal arguments |
+| `zell.trace.server` | `off` | `messages` or `verbose` to log LSP traffic |
+
+The extension makes itself the formatter for `.zl` files and turns on format-on-save, using the same
+rules as `zell fmt`. To keep formatting manual, add `"[zell]": { "editor.formatOnSave": false }` to your
+settings.
+
+## IntelliJ IDEA and GoLand
+
+The plugin lives in [zell-lang/zell-idea-plugin](https://github.com/zell-lang/zell-idea-plugin). Download
+the zip from its releases page and install it with **Settings → Plugins → ⚙ → Install Plugin from Disk**.
+It finds the toolchain on `PATH` or in `ZELL_HOME`, or you set it in **Settings → Languages → Zell**.
+
+The plugin parses Zell itself for highlighting, the structure view and folding, and hosts `zell-lsp` for
+diagnostics, navigation, completion, rename and formatting.
+
+<Callout type="warning">
+JetBrains exposes its LSP API only in the commercial IDEs (IntelliJ IDEA Ultimate, GoLand and the
+others). In IntelliJ IDEA Community the plugin cannot start the server.
+</Callout>
+
+## Neovim
+
+Neovim 0.10 and newer has an LSP client built in. Register the file type and start the server for `.zl`
+files, for example in `init.lua`:
+
+```lua
+vim.filetype.add({ extension = { zl = "zell" } })
+
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = "zell",
+  callback = function()
+    vim.lsp.start({
+      name = "zell",
+      cmd = { "zell-lsp" },
+      root_dir = vim.fs.root(0, { "zell.toml", "zell.json", "zell.yaml", ".git" }),
+    })
+  end,
+})
+```
+
+There is no tree-sitter grammar yet, so highlighting comes from the server's semantic tokens.
+
+## Helix
+
+Add the language and the server to `~/.config/helix/languages.toml`:
+
+```toml
+[[language]]
+name = "zell"
+scope = "source.zell"
+file-types = ["zl"]
+roots = ["zell.toml"]
+language-servers = ["zell-lsp"]
+
+[language-server.zell-lsp]
+command = "zell-lsp"
+```
+
+Any other editor with an LSP client (Zed, Sublime Text, Emacs with eglot or lsp-mode) works the same way:
+run `zell-lsp` over stdio for files with the `zl` extension.
+
+## What the server does
+
+`zell-lsp` runs the compiler's own front end, so what it reports is exactly what `zell build` would say.
+It implements LSP 3.17; the highlights:
+
+- **Diagnostics** as you type, also in half-written code, with quick fixes: add `?` or `try` to an
+  unhandled `T!`, rename an unused variable to `_`, add or remove an import.
+- **Navigation**: go to definition (including into the standard library sources), implementation and
+  type definition, find references, call and type hierarchies, workspace symbols.
+- **Completion** of members after `.` from the receiver's type, names in scope, keywords, and names from
+  namespaces you have not imported yet, with the `import` added for you. Hover shows the signature and the
+  doc comment; signature help follows the arguments.
+- **Rename** across files. It refuses a new name that would clash with or shadow another declaration, and
+  names the conflict. Renaming or moving a file updates its `namespace` line and the imports.
+- **Refactorings**: extract variable or function, inline a variable or a function, change signature
+  (add, remove or reorder parameters across the workspace and an interface's implementations), fill
+  struct fields, implement an interface, organize imports, and switch between `?` and `try … catch`.
+- **Code lenses**: ▶ Run above `main`, ▶ Run test and Debug test above each `@test` function, and
+  reference counts on exported declarations.
+- **Formatting** of the document, a selection, or the block you just closed.
+
+### Lints
+
+Besides compile errors, the compiler checks for likely mistakes. The editor shows them with the code
+and, where the change is mechanical, offers a quick fix; the command line prints the same findings.
+
+| Code | Finds |
+|---|---|
+| `L0001` | unreachable code after `return`, `break`, `continue` or `panic` |
+| `L0002` | an inner `err` that hides an outer one |
+| `L0003` | an empty `catch { }` that swallows an error |
+| `L0004` | self-assignment such as `x = x` |
+| `L0005` | a constant condition such as `1 == 2` or `x == x` |
+| `L0006` | an unused parameter of a private function (a hint) |
+| `L0007` | a private function nothing calls |
+| `L0008` | `defer` inside a loop |
+| `L0009` | a type with `Drop` that stores a closure capturing `this` |
+| `L0010` | a declaration that hides a name brought in by an import |
+
+```sh
+zell check                  # warning[L0004]: self-assignment of x
+zell check --lint=error     # every finding fails the build
+zell check --fix            # apply the quick fixes to the files
+```
+
+Silence one finding with a comment on its line or the line above, `// zell:allow L0004`. A package sets
+levels for all its files in a `[lints]` table of `zell.toml`, for example `L0003 = "error"`; the
+language server does not read that table yet and uses the default levels.
+
+## Debugging
+
+In VS Code, press **F5** on a `.zl` file: the extension builds it with debug information and starts it
+under Zell's debug agent, which is linked into every debug build. No lldb or gdb is needed. You get
+breakpoints with conditions, hit counts and logpoints, breaking on panics and on error creation, stepping
+that follows a task across `await`, one call stack per task, and variables shown as Zell values. The
+**Debug test** lens does the same for a single test.
+
+For a project, a `launch.json` entry points at the source or at a built program:
+
+```json
+{
+  "type": "zell",
+  "request": "launch",
+  "name": "Debug Zell file",
+  "source": "${file}"
+}
+```
+
+To attach from another editor, start the program under the agent and connect to the port it listens on:
+
+```sh
+zell debug run app.zl --headless --port 2345
+```
+
+`zell debug` with no subcommand instead builds the program and starts lldb (or gdb with `--gdb`), which
+you install yourself, with formatters from the toolchain that print Zell strings, slices and maps
+readably.
+
+## Next
+
+[Variables, types and functions](/docs/learn/basics): the first chapter of the language.

@@ -1,0 +1,44 @@
+namespace wordfreq
+
+// Characters stripped from both ends of a word.
+const Punctuation = ".,;:!?\"'()[]"
+
+// Options change what counts as a word.
+struct Options {
+    IgnoreCase bool
+    MinLength  int
+}
+
+// One word and the number of times it occurs.
+struct Entry {
+    Word  string
+    Count int
+}
+
+// Count splits text on whitespace, trims punctuation and counts each word.
+func Count(text string, opts Options) map[string]int {
+    var counts = map[string]int{}
+    for field in strings.Fields(text) {
+        var word = strings.TrimRight(strings.TrimLeft(field, Punctuation), Punctuation)
+        if opts.IgnoreCase {
+            word = strings.ToLower(word)
+        }
+        if word != "" && len(strings.Runes(word)) >= opts.MinLength {
+            counts[word] += 1
+        }
+    }
+    return counts
+}
+
+// Top returns the n most frequent words; ties are in alphabetical order.
+func Top(counts map[string]int, n int) []Entry {
+    var entries []Entry
+    for word in maps.SortedKeys(counts) {
+        entries = append(entries, Entry{Word: word, Count: counts[word]})
+    }
+    slices.SortFunc(entries, (a, b) => a.Count > b.Count)   // stable
+    if len(entries) > n {
+        return entries[..n]
+    }
+    return entries
+}

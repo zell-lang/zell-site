@@ -1,0 +1,52 @@
+namespace wordfreq
+
+import io
+
+// Flags of the command line, filled by cli.Bind from --top, -i and so on.
+struct Flags {
+    @cli.flag(short: "n", help: "how many words to print") Top int = 5
+    @cli.flag(short: "i", help: "ignore case") IgnoreCase bool
+    @cli.flag(help: "skip words shorter than this") MinLength int = 1
+}
+
+// An error that makes the process exit with status 2, like a usage error.
+struct UsageError {
+    Text string
+    func Message() string { return this.Text }
+    func ExitCode() int { return 2 }
+}
+
+func run(c *cli.Context) void! {
+    var f = cli.Bind<Flags>(c)?
+    if f.Top < 1 {
+        return UsageError{Text: "--top must be at least 1"}
+    }
+    var text = ""
+    if len(c.Args) == 0 {
+        text = io.ReadAll()?("reading standard input")
+    }
+    for path in c.Args {
+        text += io.ReadFile(path)?("reading " + path) + "\n"
+    }
+
+    var counts = Count(text, Options{IgnoreCase: f.IgnoreCase, MinLength: f.MinLength})
+    var total = 0
+    for _, n in counts {
+        total += n
+    }
+    println(total, "words,", len(counts), "distinct")
+    for e in Top(counts, f.Top) {
+        println(fmt.Format("{0,5}  {1}", e.Count, e.Word))
+    }
+}
+
+func main() {
+    var app = cli.App{
+        Name: "wordfreq",
+        Version: "0.1.0",
+        Help: "Print the most frequent words of files, or of standard input.",
+        Flags: cli.FlagsOf<Flags>(),
+        Action: run,
+    }
+    os.Exit(app.Run(os.Args()))
+}

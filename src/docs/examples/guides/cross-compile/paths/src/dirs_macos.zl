@@ -1,0 +1,6 @@
+namespace paths
+
+// Compiled only for macOS targets.
+func configDir() string {
+    return fs.Join(os.Getenv("HOME"), "Library/Application Support/wordfreq")
+}

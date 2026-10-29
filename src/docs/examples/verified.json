@@ -303,6 +303,30 @@
     "zell": "0.1.5",
     "hash": "493a14de"
   },
+  "guides/cli-tool": {
+    "zell": "0.1.5",
+    "hash": "e483f934"
+  },
+  "guides/cross-compile/paths": {
+    "zell": "0.1.5",
+    "hash": "c36d2cec"
+  },
+  "guides/json/bad-input": {
+    "zell": "0.1.5",
+    "hash": "6f82b1b0"
+  },
+  "guides/json/envelope": {
+    "zell": "0.1.5",
+    "hash": "b313af52"
+  },
+  "guides/json/model": {
+    "zell": "0.1.5",
+    "hash": "76e3b5bb"
+  },
+  "guides/json/report": {
+    "zell": "0.1.5",
+    "hash": "88652920"
+  },
   "hello/first": {
     "zell": "0.1.5",
     "hash": "84b37bbf"

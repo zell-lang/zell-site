@@ -1,0 +1,15 @@
+{
+  "orders": 2,
+  "revenue_cents": 3750,
+  "units_by_sku": {
+    "MUG-1": 3,
+    "TEA-7": 1
+  },
+  "rejected": [
+    "event 3 (order.created): id: expected int, found string",
+    "event 4 (order.created): customer.email: required"
+  ],
+  "skipped_types": [
+    "customer.updated"
+  ]
+}

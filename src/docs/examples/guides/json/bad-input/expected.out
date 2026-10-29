@@ -1,0 +1,5 @@
+accepted: 1 1
+rejected: order: items[1].qty: expected int, found string
+rejected: order: email: required
+rejected: order: json: unexpected '}'
+rejected: order: id: expected int, found number 5.5

@@ -1,0 +1,119 @@
+By the end of this guide you will have an importer for a partner's order feed: it reads a file of JSON
+events, decodes each one according to its type, rejects bad records with messages that say exactly what
+was wrong, keeps going, and writes a summary report as JSON. Along the way you will use typed parsing with
+attributes, nested data, optional fields, dynamic values, and the error paths `encoding.json` produces.
+
+For a reference of each feature on its own, see the [JSON examples](/docs/examples/json).
+
+## Model the data
+
+The feed uses `snake_case` keys, nests the customer inside the order, and sends `null` for an empty note.
+Describe that with structs, and map each field to its key with `@json(name: …)`:
+
+<Example id="guides/json/model" />
+
+`json.Parse<T>` is generated at compile time from the fields of `T`, so there is no reflection at run
+time and a misspelled attribute option does not compile. A few rules decide how the text maps onto the
+structs:
+
+| JSON | Zell |
+|---|---|
+| object | a struct (by field name or `@json(name:)`), or `map[string]V` |
+| array | `[]T` |
+| number | `int`, `float` and the sized types; `5.5` into an `int` is an error |
+| a missing key | the field is left as it was: its zero value, or its default (see below) |
+| `null` | `nil` for pointers, slices and maps; an error for `int`, `string` and other plain types |
+| a key the struct does not have | ignored, like `"channel"` here |
+| RFC 3339 string | `time.Time` |
+| anything | `json.Value`, kept undecoded |
+
+A pointer field such as `Note *string` tells "absent" apart from an empty string. When formatting,
+`nil` is written as `null`, and `omitEmpty: true` leaves a zero-valued field out altogether, as with the
+customer's `name`.
+
+<Callout type="warning">
+A field's default value (`Qty int = 1`) is applied when the struct being decoded is the top-level value,
+a map value, or behind a pointer, but not to slice elements or nested struct fields: those start from the
+zero value. Validate missing fields explicitly rather than relying on defaults.
+</Callout>
+
+<Callout type="go">
+`@json(name: "price_cents")` replaces the struct tag `` `json:"price_cents"` ``. Attributes are checked by
+the compiler, so `@json(nmae: …)` is an error rather than a silently ignored tag. Keys are matched
+exactly, including case: there is no case-insensitive fallback.
+</Callout>
+
+## Decode by type
+
+Each event in the feed is an envelope: a `type`, a timestamp, and a `data` object whose shape depends on
+the type. Declare `data` as `json.Value` so it is kept as parsed JSON, look at `type`, then decode the
+payload with `json.Decode<T>`:
+
+<Example id="guides/json/envelope" />
+
+`json.Value` also lets you read a payload you have no struct for. `Type()`, `Keys()`, `Len()`, `Get(key)`
+and `Index(i)` navigate it; `Get` on a missing key returns `null` rather than failing. The typed accessors
+`String()`, `Int()`, `Float()` and `Bool()` return `T!`, because the value may be of another kind.
+`json.NewObject`, `NewArray`, `NewString`, `NewNumber` and `NewBool` build a value from scratch when the
+output has no fixed shape.
+
+## Handle bad input
+
+Real feeds contain mistakes. `json.Parse` and `json.Decode` return `T!`, and the error message names the
+path to the bad value, such as `items[1].qty`. Rules about values, such as "email is required", are yours
+to check after the types are known:
+
+<Example id="guides/json/bad-input" />
+
+Each record is handled on its own: `try … catch` turns a failure into a log line and `continue` moves on
+to the next record. `?("order")` adds context in front of the message without losing the original error,
+so `errors.Is` and `errors.Trace` still work on it; see [Errors](/docs/learn/errors).
+
+A syntax error rejects the whole text it was found in. That is why the importer below parses the file once
+as a list of envelopes, so a malformed file fails early, and decodes payloads one at a time, so one bad
+record does not stop the rest.
+
+## Write the report
+
+The report is a struct too. A `map[string]int` is written with its keys sorted, so the output is the same
+on every run, and `json.FormatIndent(value, prefix, indent)` lays it out for people the way Go's
+`MarshalIndent` does. `json.Format` writes the compact form.
+
+## The finished program
+
+The importer reads `events.json` from the current directory:
+
+```json
+[
+  {"type": "order.created", "at": "2026-10-01T09:30:00Z",
+   "data": {"id": 101, "customer": {"email": "ann@example.com", "name": "Ann Lee"},
+            "items": [{"sku": "MUG-1", "qty": 2, "price_cents": 1250},
+                      {"sku": "TEA-7", "qty": 1, "price_cents": 899}],
+            "note": "gift wrap"}},
+  {"type": "order.created", "at": "2026-10-01T10:05:00Z",
+   "data": {"id": 102, "customer": {"email": "bob@example.com"},
+            "items": [{"sku": "MUG-1", "qty": 1, "price_cents": 1250}],
+            "note": null}},
+  {"type": "order.refunded", "at": "2026-10-02T08:00:00Z",
+   "data": {"order_id": 101, "amount_cents": 899, "reason": "damaged"}},
+  {"type": "order.created", "at": "2026-10-02T11:00:00Z",
+   "data": {"id": "103", "customer": {"email": "cy@example.com"}, "items": []}},
+  {"type": "order.created", "at": "2026-10-03T12:00:00Z",
+   "data": {"id": 104, "customer": {"email": ""}, "items": [{"sku": "TEA-7", "qty": 3, "price_cents": 899}]}},
+  {"type": "customer.updated", "at": "2026-10-03T13:00:00Z", "data": {"id": 9}}
+]
+```
+
+<Example id="guides/json/report" />
+
+`main` returns `void!`: if the file is missing or is not valid JSON, the program prints the error with
+its trace and exits with status 1. Everything after that is per record. `apply` takes `*Report` so it can
+update the counters in place; `&report` passes the address.
+
+Two records are rejected with the reason and the record number, one event type is skipped, and the
+revenue nets out the refund: 2 × 12.50 + 8.99 + 12.50 − 8.99 = 37.50.
+
+## Next
+
+- [JSON examples](/docs/examples/json): every `encoding.json` feature in a short program.
+- [Build a command-line tool](/docs/guides/cli-tool): take the file name from the command line.

@@ -1,0 +1,6 @@
+namespace paths
+
+// Compiled only for Windows targets.
+func configDir() string {
+    return fs.Join(os.Getenv("APPDATA"), "wordfreq")
+}

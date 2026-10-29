@@ -1,0 +1,169 @@
+By the end of this guide you will build one program for Linux, macOS and Windows on amd64 and arm64 from a
+single machine, including fully static Linux binaries, and keep the few platform-specific parts of the
+code in files that compile only for their target. Every command here works the same on any host: the
+toolchain archive carries the linker and the link inputs for every target, so there is no C
+cross-compiler, SDK or sysroot to install.
+
+## See what you can build
+
+```sh
+zell target list
+```
+
+```text
+target               triple                       linker    runtime
+linux-amd64          x86_64-unknown-linux-gnu     bundled   …/targets/x86_64-unknown-linux-gnu/libzell_rt.a
+linux-arm64          aarch64-unknown-linux-gnu    bundled   …
+linux-amd64-musl     x86_64-unknown-linux-musl    bundled   …
+linux-arm64-musl     aarch64-unknown-linux-musl   bundled   …
+macos-arm64          aarch64-apple-darwin         bundled   …
+macos-amd64          x86_64-apple-darwin          bundled   …
+windows-amd64        x86_64-pc-windows-gnu        bundled   …
+```
+
+Each target has a short alias and an LLVM triple; `--target` accepts either. `zell doctor` checks that
+the linker, the standard library and every target's files are present, and ends with
+`toolchain complete`.
+
+Targets come in tiers. Tier 1 (`linux-amd64`, `linux-arm64`, `macos-arm64`, `windows-amd64`) is tested on
+every commit and gets release binaries. Tier 2 (`macos-amd64` and the musl targets) is tested for
+releases. The other targets planned for tier 2 and 3, such as `windows-arm64`, FreeBSD and WebAssembly,
+are not in the 0.1.5 toolchain.
+
+## Build for another target
+
+Add `--target` to `zell build`. This guide uses a small package, `paths`, shown in full below; any
+package or single file works the same way:
+
+```sh
+zell build --release --target linux-amd64
+zell build --release --target macos-arm64
+zell build --release --target windows-amd64
+```
+
+The binary goes to `target/release/`, named for the target (`paths` or `paths.exe`). Builds for
+different targets write the same path, so when you build several, name each output with `-o`. `-o` uses
+the name exactly as given; add `.exe` yourself for Windows:
+
+```sh
+zell build --release --target linux-arm64   -o dist/paths-linux-arm64
+zell build --release --target windows-amd64 -o dist/paths-windows-amd64.exe
+```
+
+For scale, a hello-world program built with `--release` by zell 0.1.5:
+
+| Target | Output | Size |
+|---|---|---|
+| `linux-amd64` | ELF, dynamically linked against glibc | 45 KB |
+| `linux-arm64` | ELF, dynamically linked against glibc | 47 KB |
+| `linux-amd64-musl` | ELF, statically linked | 90 KB |
+| `linux-arm64-musl` | ELF, statically linked | 97 KB |
+| `macos-amd64` | Mach-O | 67 KB |
+| `macos-arm64` | Mach-O, signed ad hoc | 105 KB |
+| `windows-amd64` | PE32+ console executable | 101 KB |
+
+<Callout type="go">
+`GOOS=linux GOARCH=arm64 go build` becomes `zell build --target linux-arm64`. As with Go, cross builds
+need nothing beyond the toolchain; unlike cgo, the C parts of Zell's runtime and standard library come
+prebuilt for every target, so they cross-compile too.
+</Callout>
+
+## Static Linux binaries
+
+A `linux-amd64` or `linux-arm64` binary links glibc dynamically and runs on distributions with glibc 2.31
+or newer (Ubuntu 20.04, Debian 11 and later). For anything else, such as Alpine, a `scratch` container or
+an old server, build for musl:
+
+```sh
+zell build --release --target linux-amd64-musl
+```
+
+The `-musl` targets always produce fully static executables with no dynamic loader and no shared
+libraries. `--static` with a glibc target needs glibc's `libc.a`, which the toolchain does not bundle, and
+the compiler says so and suggests the musl target instead.
+
+One library is missing on musl: `database.sqlite` needs the system's SQLite, which is not linked into
+static binaries, and reports that it is not available.
+
+## Write per-OS code
+
+Most programs need no platform-specific code: `fs`, `os`, `net`, `time` and `process` behave the same on
+every OS. Where something does differ, such as where configuration files live, Zell selects code at
+compile time in two ways.
+
+A file whose name ends in `_windows`, `_linux` or `_macos` (or `_amd64`, `_arm64`, `_linux_arm64`)
+compiles only for that target, as in Go. Here each of three files defines `configDir` for its OS:
+
+<Example id="guides/cross-compile/paths" files={["src/dirs_windows.zl", "src/dirs_linux.zl", "src/dirs_macos.zl"]} output="none" />
+
+For a single declaration, `@cfg` does the same. It takes `os:`, `arch:` and `feature:` conditions,
+combined with `not(…)`, `any(…)` and `all(…)`, and works on functions, types, fields, methods, constants
+and variables:
+
+<Example id="guides/cross-compile/paths" files={["src/main.zl"]} />
+
+A declaration that is left out is not type-checked, and its name does not exist for that target, so two
+versions of one function never clash. The constants `os.Name`, `os.Arch`, `os.PathSeparator` and
+`os.LineSeparator` follow the target too, and can be used in `const` declarations.
+
+Because the left-out code is not checked when you build for your own machine, check the other targets
+explicitly, for example in CI:
+
+```sh
+zell check --target linux-amd64
+zell check --target macos-arm64
+zell check --target windows-amd64
+```
+
+## What differs per OS
+
+| | Linux | macOS | Windows |
+|---|---|---|---|
+| Minimum version | glibc 2.31; none with musl | macOS 12.3 | not stated |
+| Linking | glibc dynamically, or musl statically | `libSystem` dynamically | MinGW ABI: runtime and C library statically, `msvcrt.dll` dynamically |
+| Output name | `paths` | `paths` | `paths.exe` |
+| Async I/O | epoll | kqueue | IOCP |
+
+Inside the language the differences are small. Strings and paths are UTF-8 everywhere and converted to
+UTF-16 at the Windows API boundary; `fs` accepts both `/` and `\` on Windows. `println` writes `\n` on
+every OS, and the functions that read text accept `\r\n`. Panics print the same `file:line` backtrace on
+every platform.
+
+<Callout type="note">
+macOS arm64 binaries are signed ad hoc by the linker, which is enough to run them, but they are not
+notarized. A binary downloaded through a browser carries the quarantine attribute; remove it with
+`xattr -d com.apple.quarantine ./paths`, or ship through a channel that does not set it.
+</Callout>
+
+## Add more targets
+
+A toolchain from the release archive already holds every target listed above. A source build of the
+compiler, or a target added in a later release, can download a prebuilt runtime into `~/.zell/targets`:
+
+```sh
+zell target add linux-arm64 windows-amd64
+```
+
+The archive's checksum is verified when one is published next to it. `ZELL_TARGETS_URL` is a URL template
+(`{version}` and `{triple}` are filled in) that points the download at a mirror, a `file://` URL or a
+local archive.
+
+## The finished program
+
+`paths` has a manifest, a `main` that is the same everywhere, and one file per OS:
+
+<Example id="guides/cross-compile/paths" files={["src/main.zl", "src/dirs_linux.zl", "src/dirs_macos.zl", "src/dirs_windows.zl", "zell.toml"]} />
+
+A release script for it builds every target into `dist/`:
+
+```sh
+for t in linux-amd64-musl linux-arm64-musl macos-arm64 macos-amd64; do
+  zell build --release --target "$t" -o "dist/paths-$t"
+done
+zell build --release --target windows-amd64 -o dist/paths-windows-amd64.exe
+```
+
+## Next
+
+- [Build a command-line tool](/docs/guides/cli-tool): a complete program to ship this way.
+- [Your first program](/docs/get-started/hello-world): projects, tests and release builds.

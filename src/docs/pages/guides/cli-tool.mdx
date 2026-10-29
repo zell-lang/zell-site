@@ -1,0 +1,169 @@
+By the end of this guide you will have `wordfreq`, a command-line tool that prints the most frequent words
+of the files you give it, or of its standard input. It has typed flags with generated help, reports
+unreadable files with a clear message and a non-zero exit status, comes with tests, and ships as one
+self-contained binary per platform.
+
+```sh
+$ wordfreq -n 3 pets.txt cats.txt
+20 words, 10 distinct
+    5  cat
+    2  The
+    2  a
+```
+
+You need the toolchain [installed](/docs/get-started/install) and should know the
+[basics](/docs/learn/basics) and [errors](/docs/learn/errors) chapters.
+
+## Create the package
+
+```sh
+zell init wordfreq
+cd wordfreq
+```
+
+`zell init` writes the manifest and `src/main.zl`. The manifest names the package, its namespace and the
+file with `main`:
+
+<Example id="guides/cli-tool" files={["zell.toml"]} output="none" />
+
+Every `.zl` file under `src/` that declares `namespace wordfreq` belongs to the package, so you can keep the
+counting logic and the command line in separate files without imports between them.
+
+## Count the words
+
+Keep the logic free of input and output, so tests can call it directly. Create `src/count.zl`:
+
+<Example id="guides/cli-tool" files={["src/count.zl"]} output="none" />
+
+`Count` splits on whitespace with `strings.Fields` and strips punctuation from both ends of each word.
+`Top` turns the map into a sorted slice. Map iteration order is unspecified, so it starts from
+`maps.SortedKeys` and then sorts by count with `slices.SortFunc`, which is stable: words with the same
+count stay in alphabetical order, and the output is the same on every run.
+
+## Parse flags and arguments
+
+The `cli` namespace turns a struct into flags. Each field marked `@cli.flag` becomes a flag named after
+the field in kebab case (`MinLength` is `--min-length`), and the field's default value is the flag's
+default. Replace `src/main.zl`:
+
+<Example id="guides/cli-tool" files={["src/main.zl"]} output="none" />
+
+`cli.FlagsOf<Flags>()` describes the flags at compile time, and `cli.Bind<Flags>(c)` fills a `Flags` from
+the parsed command line. Arguments that are not flags arrive in `c.Args`. The parser accepts `--top 3`,
+`--top=3`, `-n 3` and `-i`, and stops at `--`. `--help` and `--version` come for free:
+
+```sh
+$ zell run . -- --help
+Print the most frequent words of files, or of standard input.
+
+Usage:
+  wordfreq [flags]
+
+Flags:
+  -n, --top int         how many words to print (default 5)
+  -i, --ignore-case     ignore case
+      --min-length int  skip words shorter than this (default 1)
+  -h, --help            Show help
+      --version         Print the version
+```
+
+`zell run . -- args` builds the package and passes everything after `--` to the program.
+
+## Read input and report errors
+
+`run` reads standard input when there are no file arguments, and each file otherwise. `io.ReadFile`
+returns `string!`; `?("reading " + path)` passes a failure up with the file name in front of the
+operating system's message.
+
+`app.Run` turns the outcome into an exit status, and `main` hands it to `os.Exit`:
+
+| Status | When |
+|---|---|
+| `0` | success, or `--help` and `--version` |
+| `1` | `Action` returned an error; its message is printed to stderr as `error: …` |
+| `2` | a usage error: an unknown flag, a missing or malformed flag value |
+
+An error can choose its own status by having an `ExitCode() int` method, as `UsageError` does for a
+`--top` that makes no sense. `app.Run` also finds that method on an error wrapped with `?("…")`.
+
+```sh
+$ zell run . -- missing.txt
+error: reading missing.txt: open missing.txt: No such file or directory
+$ echo $?
+1
+$ zell run . -- --top 0 pets.txt
+error: --top must be at least 1
+$ zell run . -- --tpo 3
+error: unknown flag --tpo (did you mean "--top"?)
+Run 'wordfreq --help' for usage.
+$ echo $?
+2
+```
+
+<Callout type="go">
+`os.Args()` is a function and includes the program name as element 0, like Go's `os.Args`. `app.Run`
+expects exactly that form. There is no `flag` package with global state: the flags are a struct you
+bind and pass around.
+</Callout>
+
+## Test the logic
+
+Tests live next to the code, in the same namespace. Create `src/count_test.zl`:
+
+<Example id="guides/cli-tool" files={["src/count_test.zl"]} output="test" />
+
+```sh
+zell test -v
+```
+
+Each test runs in its own process, so a failing assertion or a panic stops only that test.
+`zell test --filter Top` runs only the tests whose names match.
+
+## Run it
+
+With no file arguments the tool reads standard input, which `zell run` leaves empty here:
+
+<Example id="guides/cli-tool" files={["src/main.zl"]} output="run" />
+
+Give it files, or pipe text into it:
+
+```sh
+$ zell run . -- -i -n 3 testdata/pets.txt testdata/cats.txt
+20 words, 8 distinct
+    5  cat
+    4  the
+    3  a
+$ echo "to be or not to be" | zell run . -- -n 2
+6 words, 4 distinct
+    2  be
+    2  to
+```
+
+## Build release binaries
+
+`zell build --release` writes an optimized, stripped executable to `target/release/`. With `--target`,
+the same command builds for another platform from any host; `-o` names the output, so builds for
+several targets do not overwrite each other:
+
+```sh
+zell build --release --target linux-amd64-musl -o dist/wordfreq-linux-amd64
+zell build --release --target linux-arm64-musl -o dist/wordfreq-linux-arm64
+zell build --release --target macos-arm64      -o dist/wordfreq-macos-arm64
+zell build --release --target windows-amd64    -o dist/wordfreq-windows-amd64.exe
+```
+
+The `-musl` targets produce fully static Linux executables that run on any distribution. Built with
+0.1.5, each of these binaries is between 300 and 500 KB, and none of them needs a runtime installed next
+to it. `-o` uses the name exactly as given, so add `.exe` yourself for Windows.
+[Cross-compiling](/docs/guides/cross-compile) covers the targets and their differences.
+
+## The finished program
+
+The package has four files: `zell.toml`, `src/count.zl`, `src/main.zl` and `src/count_test.zl`.
+
+<Example id="guides/cli-tool" files={["src/main.zl", "src/count.zl", "src/count_test.zl", "zell.toml"]} output="none" />
+
+## Next
+
+- [Work with JSON](/docs/guides/json): read structured input instead of plain text.
+- [Cross-compiling](/docs/guides/cross-compile): every target, static builds and per-OS code.

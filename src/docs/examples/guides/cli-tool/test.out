@@ -1,0 +1,8 @@
+=== RUN   TestCountTrimsPunctuation
+--- PASS: TestCountTrimsPunctuation (0.02s)
+=== RUN   TestCountOptions
+--- PASS: TestCountOptions (0.02s)
+=== RUN   TestTopBreaksTiesAlphabetically
+--- PASS: TestTopBreaksTiesAlphabetically (0.02s)
+PASS
+ok  	3 passed, 0 failed, 0 skipped (0.05s)
