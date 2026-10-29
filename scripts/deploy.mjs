@@ -97,16 +97,24 @@ async function upload(env) {
   // DEPLOY_API=false: the host does not run PHP (it would serve the sources), so api/ stays local.
   const withApi = env.DEPLOY_API !== "false";
   const files = localFiles().filter(f => withApi || !f.startsWith("api/"));
-  const client = await connect(env);
+  let client = await connect(env);
   try {
     const base = env.FTP_DIR;
     if (!withApi && await removeDirIfAny(client, posix.join(base, "api"))) console.log("  removed api/ (DEPLOY_API=false)");
+    // Shared hosts drop long FTP sessions now and then: reconnect and retry the file.
     for (const f of files) {
-      try {
-        await client.ensureDir(posix.join(base, posix.dirname(f)));
-        await client.uploadFrom(join(DIST, f), posix.join(base, f));
-      } catch (err) {
-        throw new Error(`${f}: ${err.message}`);
+      for (let attempt = 1; ; attempt++) {
+        try {
+          await client.ensureDir(posix.join(base, posix.dirname(f)));
+          await client.uploadFrom(join(DIST, f), posix.join(base, f));
+          break;
+        } catch (err) {
+          if (attempt === 4) throw new Error(`${f}: ${err.message}`);
+          console.log(`  ${f}: ${err.message}; reconnecting (attempt ${attempt + 1} of 4)`);
+          client.close();
+          await new Promise(r => setTimeout(r, 1000 * attempt));
+          client = await connect(env);
+        }
       }
       console.log(`  put ${f}`);
     }
