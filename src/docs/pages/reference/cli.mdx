@@ -1,0 +1,446 @@
+`zell` is the single entry point of the toolchain: it builds, runs, tests, formats, documents and debugs
+programs and manages dependencies. This page lists every command of zell 0.1.5. `zell help` prints the
+summary, and `zell <command> --help` prints the options of one command.
+
+| Command | Purpose |
+|---|---|
+| [`init`](#init) | create a package |
+| [`build`](#build) | compile a program |
+| [`run`](#run) | compile and run |
+| [`check`](#check) | type-check without generating code |
+| [`test`](#test) | run tests, benchmarks and examples |
+| [`fmt`](#fmt) | format source files |
+| [`doc`](#doc) | show or generate documentation |
+| [`debug`](#debug) | debug a program |
+| [`install`](#install), [`update`](#update), [`tree`](#tree), [`why`](#why), [`vendor`](#vendor), [`store`](#store) | dependencies |
+| [`proxy`](#proxy) | serve a module proxy |
+| [`manifest`](#manifest) | manifest schema and format conversion |
+| [`target`](#target) | list and add cross-compilation targets |
+| [`env`](#env), [`doctor`](#doctor), [`version`](#version) | inspect the toolchain |
+| [`lsp`](#lsp), [`parse`](#parse), [`tool`](#tool), [`data`](#data) | language server, AST, profiles, data migrations |
+
+## Paths
+
+`build`, `run`, `check`, `test` and `debug` take an optional path:
+
+| Path | Builds |
+|---|---|
+| none | the package found by walking up from the current directory to a manifest |
+| a file `x.zl` | that file alone |
+| a directory with a manifest | that package |
+| a directory without a manifest | every `.zl` file in it, as one program |
+
+## Build options
+
+`build`, `run`, `check`, `test` and `debug` share these options.
+
+| Option | Effect |
+|---|---|
+| `-o <path>` | output file (single package); used exactly as given, no `.exe` is added |
+| `--release` | `-O2`, dead-section removal, stripped; output in `target/release/` |
+| `-g` | keep DWARF debug info in a `--release` build (debug builds always have it) |
+| `--strip` | no debug info, stripped executable |
+| `-O0` … `-O3` | optimization level |
+| `--static` | fully static executable (glibc targets need a system `libc.a`; use a `-musl` target instead) |
+| `--target <t>` | target alias or triple, see [Platforms](/docs/reference/platforms); also selects `@cfg`, file suffixes and `os.Name`/`os.Arch` |
+| `--leak-check` | report objects still alive at exit and exit non-zero |
+| `--no-error-trace` | do not record error return traces (`errors.Trace` is empty) |
+| `--deny-warnings` | treat warnings (`W0001` reference cycles, …) and warning-level lints as errors |
+| `--lint=off\|warn\|error` | disable the lints, keep their levels (default), or make them all errors |
+| `--fix` | apply the fixes of lint findings to the source files |
+| `--emit=exe\|obj\|llvm-ir` | what to produce (default `exe`) |
+| `--workspace` | all members of the workspace |
+| `-p, --package <name>` | one workspace member (repeatable) |
+| `--locked` | fail if `zell.lock` would change |
+| `--offline` | take module dependencies only from `zell.lock` and the store |
+| `-v, --verbose` | log the object cache and the linker command |
+
+## init
+
+Create a package: a manifest and `src/main.zl`, or `src/lib.zl` for a library.
+
+```text
+zell init [dir] [--name n] [--format toml|json|yaml] [--lib] [--agents list]
+```
+
+| Option | Effect |
+|---|---|
+| `dir` | directory to create (default: the current one) |
+| `--name n` | package name (default: the directory name) |
+| `--format toml\|json\|yaml` | manifest syntax: `zell.toml` (default), `zell.json` or `zell.yaml` |
+| `--lib` | a library: `src/lib.zl` and no `entry` |
+| `--agents list` | write AI-agent configuration (`claude`, `codex`, `gemini`, `cursor`, `windsurf`, `cline`, `aider`, `zed`, `copilot`, `claude-skills`, or `all`); also works in an existing package |
+
+```sh
+zell init hello
+zell init mylib --lib --format yaml
+```
+
+## build
+
+Compile a program. Debug builds go to `target/debug/`, release builds to `target/release/`.
+
+```text
+zell build [path] [build options]
+```
+
+```sh
+zell build --release
+zell build --release --target linux-amd64-musl -o dist/app
+```
+
+## run
+
+Build and run. Arguments after `--` go to the program; its exit status becomes `zell`'s.
+
+```text
+zell run [path] [build options] [-- args]
+```
+
+```sh
+zell run hello.zl
+zell run . -- --verbose input.txt
+```
+
+## check
+
+Type-check without generating code; faster than `build`, and works for any `--target`.
+
+```text
+zell check [path] [--dump-hir] [build options]
+```
+
+| Option | Effect |
+|---|---|
+| `--dump-hir` | print the typed intermediate representation |
+
+```sh
+zell check --target windows-amd64
+zell check --lint=error
+```
+
+## test
+
+Run the `@test` functions of the package, each in its own process. Example functions with an
+`// Output:` comment run as tests too.
+
+```text
+zell test [path] [--filter re] [--json] [--bench] [-v] [--parallel n] [--debug [--port N] [--wait]] [build options]
+```
+
+| Option | Effect |
+|---|---|
+| `--filter re` | only tests whose name matches the regular expression |
+| `-v` | print every test and its log, not only failures |
+| `--json` | machine-readable events, one JSON object per line |
+| `--bench` | also run `@test` benchmarks that take `*testing.B` |
+| `--parallel n` | run up to `n` test processes at once (default 4) |
+| `--debug` | run all selected tests in one process under the debug agent, for an editor to attach; `--port N` sets the port, `--wait` waits for the debugger |
+
+```sh
+zell test -v
+zell test --filter '^TestParse' --json
+```
+
+## fmt
+
+Rewrite `.zl` files in the canonical style.
+
+```text
+zell fmt [paths...] [--check] [--diff] [--stdin]
+```
+
+| Option | Effect |
+|---|---|
+| `paths` | files or directories, searched recursively for `.zl` files (default: `.`) |
+| `--check` | do not write; list unformatted files and exit 1 if there are any |
+| `--diff` | do not write; print a unified diff |
+| `--stdin` | format standard input to standard output |
+
+```sh
+zell fmt
+zell fmt --check src/
+```
+
+## doc
+
+Show documentation from doc comments in the terminal, or generate it as HTML, JSON or a site.
+
+```text
+zell doc [path|namespace|symbol] [--html <dir>] [--json] [--check [--min N]] [--private] [--source-url URL]
+zell doc --site <dir> [--base /zell/] [--repo-url URL] [repo]
+```
+
+| Option | Effect |
+|---|---|
+| `path\|namespace\|symbol` | a project, a namespace (`net.http`) or a symbol (`strings.Split`) |
+| `--html <dir>` | static HTML: one page per namespace, search, linked sources |
+| `--json` | the documentation as JSON |
+| `--check [--min N]` | list exported names without a doc comment; fail below `N` percent coverage (default 100) |
+| `--private` | include unexported names |
+| `--source-url URL` | with `--html`, link declarations to their sources at this URL |
+| `--site <dir>` | a project site with guides and the standard library reference; `--base` sets the URL prefix |
+
+```sh
+zell doc strings.Split
+zell doc std --html out/
+```
+
+## debug
+
+Debug a program with lldb or gdb, or with Zell's in-process debug agent.
+
+```text
+zell debug [--lldb|--gdb] [path] [--source <file>] [--batch] [build options] [-- args]
+zell debug --formatters lldb|gdb
+zell debug run [path] [--port N] [--headless [--wait]] [build options] [-- args]
+zell debug attach [host:]port
+```
+
+| Form | Effect |
+|---|---|
+| `zell debug` | build with debug info and start lldb (default) or gdb, installed separately, with the Zell formatters loaded; `--source` runs debugger commands from a file, `--batch` exits after them |
+| `zell debug --formatters` | print the path of the formatter script |
+| `zell debug run` | build with the debug agent and debug with gdb-like commands; `--headless` only starts the agent for an editor, `--wait` holds `main` until it connects |
+| `zell debug attach` | connect to a program started with `ZELL_DEBUG=[host]:port` |
+
+```sh
+zell debug run app.zl --headless --port 2345
+zell debug attach :2345
+```
+
+## install
+
+Fetch module dependencies into the store, link them into `.zell/deps/`, and write `zell.lock`. Builds do
+this on their own when something is missing.
+
+```text
+zell install [--offline] [--locked]
+```
+
+| Option | Effect |
+|---|---|
+| `--offline` | use only the lock file and the store |
+| `--locked` | fail if `zell.lock` would change |
+
+## update
+
+Move dependencies to the newest versions their constraints allow, and rewrite `zell.lock`.
+
+```text
+zell update [module|name ...]
+```
+
+```sh
+zell update
+zell update github.com/acme/money
+```
+
+## tree
+
+Print the dependency graph.
+
+```text
+zell tree
+```
+
+```text
+shop-app v0.3.1 (path:.)
+└── greet v1.0.0 (path:../greet)
+```
+
+## why
+
+Print every chain of requirements that leads to a package.
+
+```text
+zell why <module|name>
+```
+
+## vendor
+
+Copy all modules into `vendor/`; builds then use it instead of the store.
+
+```text
+zell vendor
+```
+
+## store
+
+Check, clean up or locate the module store (default `~/.zell/store`).
+
+```text
+zell store verify|prune|path
+```
+
+| Subcommand | Effect |
+|---|---|
+| `verify` | re-hash every stored file |
+| `prune` | delete versions no project refers to |
+| `path` | print the store's location |
+
+## proxy
+
+Serve a module proxy with a static layout, and optionally a checksum log, for a team or CI.
+
+```text
+zell proxy serve --dir <cache> [--addr host:port] [--upstream direct|off|<url>] [--sumdb]
+```
+
+| Option | Effect |
+|---|---|
+| `--dir <cache>` | where cached modules are kept |
+| `--addr host:port` | address to listen on |
+| `--upstream direct\|off\|<url>` | fetch missing modules from git, nowhere, or another proxy |
+| `--sumdb` | also serve a checksum log |
+
+## manifest
+
+Print the manifest's JSON Schema, or rewrite the manifest in another syntax.
+
+```text
+zell manifest schema
+zell manifest convert <toml|json|yaml> [dir]
+```
+
+See [zell.toml](/docs/reference/manifest).
+
+## target
+
+List the known targets and where their runtimes are, or download prebuilt runtimes.
+
+```text
+zell target list
+zell target add <target>... [--url template]
+```
+
+`target add` downloads into `~/.zell/targets` (`ZELL_TARGETS`); `--url` overrides `ZELL_TARGETS_URL`.
+See [Platforms](/docs/reference/platforms).
+
+## env
+
+Print the toolchain's environment settings, or the values of the named ones.
+
+```text
+zell env [NAME ...]
+```
+
+```sh
+zell env ZELL_HOME
+```
+
+## doctor
+
+Check that the toolchain is complete: the linker, the standard library and every target's link inputs.
+Prints one line per item and ends with `toolchain complete`.
+
+```text
+zell doctor
+```
+
+## version
+
+```text
+zell version            # zell 0.1.5 (x86_64)
+```
+
+## lsp
+
+Run the language server on stdio; it executes `zell-lsp` from the same directory. See
+[Set up an editor](/docs/get-started/editors).
+
+```text
+zell lsp
+```
+
+## parse
+
+Print the syntax tree of a file.
+
+```text
+zell parse <file.zl>
+```
+
+## tool
+
+Inspect a profile written by `diag` with `go tool pprof` (Go must be installed).
+
+```text
+zell tool pprof [args] <profile>
+```
+
+## data
+
+Database migrations for the `data` framework.
+
+```text
+zell data migration add <Name>
+zell data migration list
+zell data update [target]
+zell data script
+zell data list
+```
+
+| Command | Effect |
+|---|---|
+| `migration add <Name>` | compare the model with `migrations/snapshot.json`; write `migrations/<timestamp>_<Name>.zl` and the new snapshot |
+| `migration list` | list the migration files |
+| `update [target]` | apply pending migrations, or migrate up or down to `target` (`0` = none) |
+| `script` | print the SQL of all migrations |
+| `list` | show which migrations are applied |
+
+| Option | Effect |
+|---|---|
+| `--project <dir>` | the project directory (default `.`) |
+| `--dir <dir>` | the migrations directory (default `<project>/migrations`) |
+| `--provider <p>` | `postgres` or `sqlite` (default `$ZELL_DATA_PROVIDER`, else `sqlite`) |
+| `--dsn <dsn>` | data source name (default `$ZELL_DATA_DSN`) |
+| `--context <Name>` | the context whose namespace the migrations get (default: the first) |
+
+## Environment variables
+
+### Toolchain
+
+`zell env` prints the current value of each.
+
+| Variable | Default | Effect |
+|---|---|---|
+| `ZELL_HOME` | `~/.zell` | root of the store and downloaded targets |
+| `ZELL_STD` | `<toolchain>/std` | standard library sources |
+| `ZELL_STORE` | `$ZELL_HOME/store` | module store; can be shared, for example in CI |
+| `ZELL_PROXY` | `direct` | proxies to try: `,` moves on after a 404/410, `\|` after any error; `direct` is git, `off` fails |
+| `ZELL_NOPROXY` | `$ZELL_PRIVATE` | path globs fetched directly, still checked against the log |
+| `ZELL_PRIVATE` | empty | private module paths (`github.com/corp/*`): straight to git, no proxy or checksum log |
+| `ZELL_SUMDB` | `off` | base URL of the checksum log, or `off` |
+| `ZELL_NOSUMDB` | `$ZELL_PRIVATE` | path globs not checked against the log |
+| `ZELL_LINKER` | bundled `lld` | `clang` forces linking through the system clang |
+| `ZELL_LLD` | `<toolchain>/bin/lld` | another `lld` binary |
+| `ZELL_LTO` | `off` | `1`: ThinLTO of a host `--release` build with the runtime; needs system clang and lld |
+| `ZELL_TARGETS` | `<toolchain>/targets` and `$ZELL_HOME/targets` | where target runtimes are looked up |
+| `ZELL_TARGETS_URL` | GitHub release URL | template for `zell target add`, with `{version}` and `{triple}` |
+| `ZELL_RUNTIME` | | a specific `libzell_rt.a` for the host |
+
+### Programs
+
+Read by every Zell program at startup.
+
+| Variable | Effect |
+|---|---|
+| `ZELL_WORKERS=n` | number of scheduler worker threads (default: online CPUs, at most 256) |
+| `ZELL_NO_BACKTRACE=1` | a panic prints only the `panic: …` line |
+| `ZELL_NO_LINES=1` | backtraces show symbol and offset instead of `file:line` |
+| `ZELL_CYCLES=auto\|manual\|off` | cycle collector: automatic (default), only on `runtime.CollectCycles()`, or off |
+| `ZELL_DEBUG=[host]:port[,wait]` | start the debug agent before `main` (debug builds); port `0` picks a free one |
+| `ZELL_IO_BACKEND=io_uring` | use io_uring on Linux 6.0 and newer instead of epoll |
+| `ZELL_DIAG_HEAP=1` | per-type live object counters for `diag.HeapByType` |
+| `ZELL_TEST_PANICS=process` | `testing.Panics` re-runs the test in a child process |
+
+## Exit status
+
+| Command | Status |
+|---|---|
+| `build`, `check`, `test`, `fmt --check` | `0` on success, `1` on errors, failed tests or unformatted files |
+| `run` | the program's own status; `1` if it does not compile |
+| a program whose `main` returns an error | `1`, after printing `error: …` and the trace |
+| a program that panics | `2` |
+| a program built with `--leak-check` that leaks | `66` |

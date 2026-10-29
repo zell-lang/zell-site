@@ -282,13 +282,13 @@
         {
           "slug": "cli",
           "title": "The zell command",
-          "status": "planned",
-          "summary": "build, run, test, check, fmt, doc, debug, install and the rest, with every option."
+          "status": "draft",
+          "summary": "Every command of the zell tool with its options, the environment variables and the exit codes."
         },
         {
           "slug": "manifest",
           "title": "zell.toml",
-          "status": "planned",
+          "status": "draft",
           "summary": "Package, workspace and dependency fields of the manifest and the lock file."
         },
         {
@@ -300,7 +300,7 @@
         {
           "slug": "platforms",
           "title": "Platforms and targets",
-          "status": "planned",
+          "status": "draft",
           "summary": "Supported hosts and targets, their tiers and requirements."
         }
       ]

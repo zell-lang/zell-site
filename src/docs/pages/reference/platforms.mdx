@@ -1,0 +1,130 @@
+Every Zell toolchain can build for every target it lists, from any host: LLVM generates the code, the
+bundled `lld` links it, and the archive carries the runtime and the C library pieces for each target. For
+step-by-step use, see [Cross-compiling](/docs/guides/cross-compile).
+
+## Hosts
+
+The toolchain itself (`zell`, `zell-lsp`, `zell-mcp`, `lld`) is released for these hosts:
+
+| Host | Archive |
+|---|---|
+| Linux x86-64 | `zell-<version>-linux-amd64.tar.xz` |
+| Linux arm64 | `zell-<version>-linux-arm64.tar.xz` |
+| macOS arm64 | `zell-<version>-macos-arm64.tar.xz` |
+| macOS x86-64 | `zell-<version>-macos-amd64.tar.xz` |
+| Windows x86-64 | `zell-<version>-windows-amd64.tar.xz`, also `.tar.gz` |
+
+A host archive contains:
+
+```text
+zell-<version>-<host>/
+  bin/       zell, zell-lsp, zell-mcp, lld
+  std/       standard library sources
+  targets/   one directory per target triple: runtime, compiler-rt, C library parts
+  tools/     VS Code extension sources, lldb and gdb formatters
+```
+
+## Targets
+
+`zell target list` prints the targets of the installed toolchain. In 0.1.5:
+
+| Target | Triple | Output | Tier |
+|---|---|---|---|
+| `linux-amd64` | `x86_64-unknown-linux-gnu` | ELF, dynamically linked against glibc | 1 |
+| `linux-arm64` | `aarch64-unknown-linux-gnu` | ELF, dynamically linked against glibc | 1 |
+| `linux-amd64-musl` | `x86_64-unknown-linux-musl` | ELF, fully static | 2 |
+| `linux-arm64-musl` | `aarch64-unknown-linux-musl` | ELF, fully static | 2 |
+| `macos-arm64` | `aarch64-apple-darwin` | Mach-O, signed ad hoc | 1 |
+| `macos-amd64` | `x86_64-apple-darwin` | Mach-O | 2 |
+| `windows-amd64` | `x86_64-pc-windows-gnu` | PE32+ console executable | 1 |
+
+`--target` accepts the alias or the triple. The host is the default target.
+
+| Tier | Guarantee |
+|---|---|
+| 1 | built and tested in CI on every commit; release binaries |
+| 2 | built and tested in CI for releases; release binaries |
+| 3 | compiles; tests where possible |
+
+## Requirements of the built programs
+
+| Target | Runs on | Linked dynamically |
+|---|---|---|
+| `linux-amd64`, `linux-arm64` | glibc 2.31 or newer (Ubuntu 20.04, Debian 11 and later) | glibc (`libc`, `libm`, `libpthread`, …); `libsqlite3` if the program uses `database.sqlite` |
+| `linux-*-musl` | any Linux distribution | nothing; musl 1.2.5 is linked in |
+| `macos-arm64`, `macos-amd64` | macOS 12.3 or newer | `libSystem` |
+| `windows-amd64` | Windows | `msvcrt.dll` and system DLLs; the runtime and the MinGW CRT are linked in |
+
+`windows-amd64` uses the MinGW ABI (`x86_64-pc-windows-gnu`). The MSVC ABI (`x86_64-pc-windows-msvc`,
+PDB debug info) cannot be linked yet.
+
+## Static linking
+
+The `-musl` targets always produce fully static executables: no dynamic loader, no shared libraries. They
+run on any Linux distribution and in an empty (`scratch`) container image.
+
+`--static` with a glibc target needs glibc's static `libc.a`, which the toolchain does not bundle; the
+build fails with a message that suggests the musl target. The musl targets cannot use
+`database.sqlite`, which needs the system's SQLite library.
+
+## Binary sizes
+
+Hello world built with `zell build --release` by zell 0.1.5:
+
+| Target | Size |
+|---|---|
+| `linux-amd64` | 45 KB |
+| `linux-arm64` | 47 KB |
+| `linux-amd64-musl` | 90 KB |
+| `linux-arm64-musl` | 97 KB |
+| `macos-amd64` | 67 KB |
+| `macos-arm64` | 105 KB |
+| `windows-amd64` | 101 KB |
+
+## Per-target behavior
+
+The language and the standard library behave the same on every target. What the runtime uses underneath:
+
+| Area | Linux | macOS | Windows |
+|---|---|---|---|
+| Threads | pthreads | pthreads | Win32 threads |
+| Async I/O | epoll (io_uring with `ZELL_IO_BACKEND=io_uring`) | kqueue | IOCP |
+| Files and paths | POSIX | POSIX | Win32 wide-character API; UTF-8 converted to UTF-16 |
+| Random bytes | `getrandom` | `getentropy` | `BCryptGenRandom` |
+| Panic backtraces | `file:line` | `file:line` | `file:line` |
+
+Strings and paths are UTF-8 on every target; `fs` accepts `/` and `\` on Windows. `println` writes `\n`
+everywhere, and text-reading functions accept `\r\n`. The compile-time constants `os.Name`
+(`"linux"`, `"macos"`, `"windows"`), `os.Arch` (`"amd64"`, `"arm64"`), `os.PathSeparator` and
+`os.LineSeparator` follow the target.
+
+## Conditional compilation
+
+| Mechanism | Example | Selects |
+|---|---|---|
+| File suffix | `dirs_windows.zl`, `io_linux_arm64.zl` | a file, for `_linux`, `_macos`, `_windows`, `_amd64`, `_arm64` and OS-architecture pairs |
+| `@cfg` | `@cfg(os: "windows")`, `@cfg(not(arch: "arm64"))` | a declaration, or a whole file when placed before `namespace` |
+
+`@cfg` conditions: `os:` (`linux`, `macos`, `windows`, `freebsd`, `android`, `ios`, `wasi`), `arch:`
+(`amd64`, `arm64`, `wasm32`), `feature:` (from the [manifest](/docs/reference/manifest#features)), and
+`not(…)`, `any(…)`, `all(…)`. An unknown key, OS or architecture is a compile error. A file named
+explicitly on the command line is always compiled, whatever its suffix.
+
+## Adding targets
+
+`zell target add <target>…` downloads `zell-runtime-<version>-<triple>.tar.gz` from the release into
+`~/.zell/targets` (`ZELL_TARGETS`), verifies its `.sha256` when one is published, and unpacks it. This is
+needed only for a compiler built from source or for targets that are not in the archive.
+`ZELL_TARGETS_URL` overrides the URL template, with `{version}` and `{triple}` placeholders.
+
+## Not available in 0.1.5
+
+| Target | Planned tier | Status |
+|---|---|---|
+| `windows-arm64` | 2 | no runtime: `--target windows-arm64` fails with "no Zell runtime for aarch64-pc-windows-gnu" |
+| `freebsd-amd64` | 2 | `zell check` only; no runtime to link with |
+| `x86_64-pc-windows-msvc` | | `zell check` and `--emit=obj` only; linking needs the Windows SDK and an MSVC-built runtime |
+| `wasm32-wasi`, `android-arm64`, `ios-arm64` | 3 | not supported for building |
+
+`ZELL_LTO=1` (ThinLTO of the program with the runtime) works only for host builds on Linux and macOS with
+a system clang and lld; it does not apply to cross builds, Windows or the bundled linker.

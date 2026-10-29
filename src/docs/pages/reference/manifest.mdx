@@ -1,0 +1,179 @@
+A package is a directory with a manifest. The manifest names the package, its root namespace and its
+entry point, and lists dependencies, features, capabilities and lint levels. A workspace root lists member
+packages instead. `zell.lock` next to it records the exact dependency graph.
+
+The manifest can be written in three syntaxes with one schema: `zell.toml`, `zell.json` or `zell.yaml`.
+A directory may hold only one of them. `zell manifest convert yaml` rewrites it in another syntax, and
+`zell manifest schema` prints the JSON Schema that editors use for completion and checking. Unknown keys
+are an error.
+
+## Example
+
+```toml
+[package]
+name = "shop-app"                 # lowercase letters, digits, "-"; starts with a letter
+version = "0.3.1"                 # MAJOR.MINOR.PATCH
+namespace = "shop"                # root namespace; default: name with "-" -> "_"
+entry = "src/main.zl"             # file with main; omit for a library
+license = "MIT"
+description = "Order service"
+
+[dependencies]
+"github.com/acme/money" = "^1.2"                                 # a module, by repository path
+router = { git = "github.com/acme/router", version = "~0.4.1" }   # a module under a short name
+"github.com/acme/crypto" = { version = ">=0.5, <1", features = ["argon2"] }
+experimental = { git = "https://github.com/acme/exp", tag = "v0.4.0" }   # pinned to a tag
+greet = { path = "../greet", features = ["loud"] }                # a local package
+
+[dev-dependencies]
+"github.com/acme/testkit" = "^1"  # only for zell test
+
+[features]
+default = ["metrics"]             # enabled unless turned off
+metrics = []
+tls = ["greet/loud"]              # enables a feature of a dependency
+
+[capabilities]
+unsafe = false                    # may the package import `unsafe`?
+
+[lints]
+L0003 = "error"                   # empty catch fails the build
+unused-param = "off"              # by name or by code
+```
+
+## [package]
+
+| Field | Required | Meaning |
+|---|---|---|
+| `name` | yes | package name: lowercase ASCII letters, digits and `-`, starting with a letter, not ending with `-` |
+| `version` | yes | `MAJOR.MINOR.PATCH`, with an optional `-pre` or `+build` suffix |
+| `namespace` | no | the root namespace the package owns; a single identifier of lowercase letters, digits and `_`. Default: `name` with `-` replaced by `_`. A standard-library root (`io`, `net`, `text`, …) is rejected |
+| `entry` | no | the file with `main`, relative to the manifest. Without it the package is a library |
+| `license` | no | license identifier, informational |
+| `description` | no | one-line description, informational |
+
+Every `.zl` file of the package declares the root namespace or one below it (`shop`, `shop.models`).
+`zell init` writes `name`, `version`, `namespace` and `entry`.
+
+## [dependencies] and [dev-dependencies]
+
+Each entry maps a key to a version constraint string or to a table. `[dev-dependencies]` has the same form
+and is used only by `zell test`.
+
+The key is either a module path such as `"github.com/acme/money"`, recognized by a `/` or a dot in its
+first segment, or a package name. A `path` dependency must be keyed by its package name; a `git`
+dependency under a short name gives the module an alias.
+
+| Field | Meaning |
+|---|---|
+| `version` | version constraint, see below |
+| `path` | directory of a local package, relative to this manifest |
+| `git` | repository of a module, with or without `https://` |
+| `tag`, `branch`, `rev` | pin a `git` dependency to a tag, a branch or a commit |
+| `features` | features of the dependency to enable |
+
+Rules: `path` and `git` exclude each other; an entry needs `version`, `path` or `git`; `tag`, `branch` and
+`rev` need `git`. A dependency's code is imported by its own root namespace (`import money`), and `as`
+resolves a clash between two roots. Only one major version of a module may be in the graph.
+
+### Version constraints
+
+Versions of modules are git tags `vMAJOR.MINOR.PATCH`. Selection is minimal version selection, as in Go:
+the lowest version that satisfies every constraint, so a new release changes nothing until
+`zell update`.
+
+| Constraint | Matches |
+|---|---|
+| `^1.2` or `1.2` | `>=1.2.0, <2.0.0` |
+| `^0.4.1` | `>=0.4.1, <0.5.0` (the left-most non-zero part stays fixed) |
+| `~1.2.3` | `>=1.2.3, <1.3.0` |
+| `~1` | `>=1.0.0, <2.0.0` |
+| `=1.4.0` | exactly `1.4.0` |
+| `=1.4` | `>=1.4.0, <1.5.0` |
+| `>=1, <2` | a comma-separated list: all must hold; operators `>=`, `>`, `<=`, `<`, `=` |
+| `*` | any version |
+
+A pre-release such as `1.3.0-rc.1` matches only a constraint that names a pre-release of the same
+`1.3.0`.
+
+## [features]
+
+A map from feature name to the features it turns on. An entry is another feature of this package or
+`dependency/feature`, which enables a feature of a dependency. `default` lists the features on by default.
+Code selects on features with `@cfg(feature: "tls")`. A feature that refers to an unknown feature or to a
+dependency not in `[dependencies]` is an error.
+
+## [capabilities]
+
+Grants the low-level standard-library modules a package may import. Without the grant, and in a build
+without a manifest, importing them is a compile error.
+
+| Key | Allows |
+|---|---|
+| `unsafe = true` | `import unsafe`: memory and calls by address |
+| `plugin = true` | `import plugin`: loading shared libraries |
+
+## [lints]
+
+Lint code or name mapped to a level: `off`, `hint`, `info`, `warn` or `error`. It applies to the package's
+own files; dependencies are not linted. The lint codes are listed in
+[Set up an editor](/docs/get-started/editors#lints). The language server does not read this table yet.
+
+```toml
+[lints]
+L0003 = "error"
+unused-param = "off"
+```
+
+## [workspace]
+
+A repository with several packages has a root manifest that lists them. `members` holds directories
+relative to the root, with `*` globs. The members share one `zell.lock` and one `target/` at the root;
+`zell build --workspace` builds all of them and `-p name` picks one.
+
+```toml
+[workspace]
+members = ["services/*", "libs/*"]
+```
+
+A root with `[workspace]` and no `[package]` is a virtual workspace: it cannot have dependencies or
+features. A manifest needs `[package]`, `[workspace]` or both.
+
+## zell.lock
+
+`zell` writes `zell.lock` next to the manifest (or the workspace root) whenever the graph changes; commit
+it. Its format is always YAML, whatever the manifest's syntax, with sorted entries and keys so it merges
+well. `--locked` makes a build fail instead of changing it.
+
+```yaml
+# zell.lock: generated by `zell`, do not edit by hand.
+packages:
+- checksum: sha256:e4a92d58770041d3864026ac18e268322bc0f7b8ffe268addb219f1737a5fa4f
+  name: greet
+  source: path:../greet
+  version: 1.0.0
+- checksum: sha256:6016e59fcc33dc99094472102194d7d5f30c6fd8c488cee506b6dcd1c82169c8
+  dependencies:
+  - greet
+  name: shop-app
+  source: path:.
+  version: 0.3.1
+version: 1
+```
+
+| Key | Meaning |
+|---|---|
+| `version` | lock format version, currently `1` |
+| `packages` | every package of the graph, the project itself included, sorted by name |
+| `name` | package name |
+| `version` | for a path package its manifest version; for a module the selected tag (`v1.2.3`) or a pseudo-version |
+| `source` | `path:<dir>`; `module` for a version chosen by selection; `git+<url>?tag=…#<commit>` (or `branch=`, `rev=`) for a git pin |
+| `module` | the module path, for modules only |
+| `dependencies` | names of the direct dependencies and dev-dependencies, sorted; omitted when empty |
+| `checksum` | `sha256:<hex>` over the sources of a path package; `h1:…` over the module tree, checked on every download |
+
+## Related
+
+- [The zell command](/docs/reference/cli#install): `install`, `update`, `tree`, `why`, `vendor`, `store`.
+- Environment variables for proxies, private modules and the checksum log:
+  [The zell command](/docs/reference/cli#environment-variables).
