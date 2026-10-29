@@ -69,7 +69,7 @@
         {
           "slug": "generics",
           "title": "Generics",
-          "status": "planned",
+          "status": "draft",
           "summary": "Type parameters on functions, methods and types, constraints, and monomorphization."
         },
         {
@@ -233,7 +233,7 @@
         {
           "slug": "http-service",
           "title": "Write an HTTP service",
-          "status": "planned",
+          "status": "draft",
           "summary": "Routing, JSON requests and responses, middleware, graceful shutdown."
         },
         {
@@ -245,7 +245,7 @@
         {
           "slug": "sql",
           "title": "Use a SQL database",
-          "status": "planned",
+          "status": "draft",
           "summary": "database.sql with SQLite and PostgreSQL, typed queries, transactions."
         },
         {

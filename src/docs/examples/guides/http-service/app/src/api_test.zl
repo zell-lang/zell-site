@@ -1,0 +1,33 @@
+namespace todo
+
+import net
+
+// Handlers are tested without a network: test.Serve runs a request
+// through the router and middleware into a recorder.
+func app() http.Handler {
+    var r = Routes(new Store{})
+    r.Use(Errors())
+    return r
+}
+
+@test
+async func TestCreateAndGet(t *testing.T) {
+    var h = app()
+    var created = await http.test.Serve(h, http.test.NewRequest("POST", "/todos", "{\"title\": \"a\"}"))
+    testing.Equal(t, created.Status, 201)
+    testing.Equal(t, created.Header("Location"), "/todos/1")
+
+    var got = await http.test.Serve(h, http.test.NewRequest("GET", "/todos/1", ""))
+    var todo = t.Must(got.JSON<Todo>())
+    testing.Equal(t, todo.Title, "a")
+}
+
+@test
+async func TestErrorStatuses(t *testing.T) {
+    var h = app()
+    var cases = [("/todos/1", 404), ("/todos/x", 400)]
+    for c in cases {
+        var res = await http.test.Serve(h, http.test.NewRequest("GET", c.0, ""))
+        testing.Equal(t, res.Status, c.1)
+    }
+}

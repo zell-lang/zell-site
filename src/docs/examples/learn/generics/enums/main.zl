@@ -1,0 +1,37 @@
+namespace lookup
+
+import io
+
+enum Maybe<T> {
+    Some(value T)
+    None
+
+    func Or(fallback T) T {
+        switch this {
+            case Maybe.Some(v): return v
+            case Maybe.None:    return fallback
+        }
+    }
+}
+
+func Find<T>(xs []T, match func(T) bool) Maybe<T> {
+    for x in xs {
+        if match(x) {
+            return Maybe<T>.Some(x)
+        }
+    }
+    return Maybe<T>.None
+}
+
+func main() {
+    var ports = [80, 443, 8080]
+    var high = Find(ports, p => p > 1000)        // Maybe<int>
+    switch high {
+        case Maybe.Some(p): println("found", p)  // no type arguments in patterns
+        case Maybe.None:    println("none")
+    }
+
+    var names = ["ann", "bob"]
+    println(Find(names, n => strings.HasPrefix(n, "z")).Or("nobody"))
+    println(Maybe<float>.None.Or(0.5))
+}

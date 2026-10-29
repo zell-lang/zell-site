@@ -1,0 +1,10 @@
+POST /todos -> 201 {"id":1,"title":"write the docs","done":false}
+POST /todos/1/done -> 200 {"id":1,"title":"write the docs","done":true}
+GET /todos/1 -> 200 {"id":1,"title":"write the docs","done":true}
+GET /todos/7 -> 404 {"error":"todo not found"}
+GET /todos/seven -> 400 {"error":"id must be a number"}
+POST /todos -> 400 {"error":"title is required"}
+POST /todos -> 400 {"error":"invalid JSON: json: invalid character 'o' at offset 1"}
+write the docs true 1
+in flight during shutdown: 200 report ready
+stopped

@@ -1,0 +1,45 @@
+namespace stats
+
+import io
+
+// T is any type with < and >: numbers, strings, char.
+func Largest<T: Ordered>(xs []T) T! {
+    if len(xs) == 0 {
+        return error("empty slice")
+    }
+    var best = xs[0]
+    for x in xs {
+        if x > best {
+            best = x
+        }
+    }
+    return best
+}
+
+// No constraint: T can be anything, and the body only moves values around.
+func CountIf<T>(xs []T, keep func(T) bool) int {
+    var n = 0
+    for x in xs {
+        if keep(x) {
+            n += 1
+        }
+    }
+    return n
+}
+
+func Clamp<T: Ordered>(x, lo, hi T) T {
+    if x < lo { return lo }
+    if x > hi { return hi }
+    return x
+}
+
+func main() void! {
+    println(Largest([3, 9, 4])?, Largest(["pear", "apple"])?)
+    println(try Largest<float>([]) else -1.0)
+
+    var words = ["go", "zell", "rust", "c"]
+    println(CountIf(words, w => len(w) > 2))
+
+    var ratio = 1.7
+    println(Clamp(ratio, 0, 1), Clamp(15, 0, 10), Clamp<float>(5, 0, 2.5))
+}

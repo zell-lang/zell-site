@@ -1,0 +1,54 @@
+namespace todo
+
+import io
+import net
+
+// call sends one request and prints the status and the body.
+async func call(base string, method string, path string, body string) void! {
+    var req = http.NewRequest(method, base + path)
+    if body != "" {
+        req.Body(body).ContentType("application/json")
+    }
+    var res = await req.Send()?
+    println(method, path, "->", res.Status, strings.TrimRight(res.Body, "\n"))
+}
+
+async func main() void! {
+    var store = new Store{}
+    var r = Routes(store)
+    r.Use(Version("1"))      // the first Use is the outermost
+    r.Use(Errors())
+
+    // A slow endpoint, to show that shutdown waits for it.
+    var started = task.Channel<bool>.New(1)
+    r.Get("/report", async func(req *http.Request, res *http.Response) void! {
+        await started.Send(true)
+        await task.Delay(50)
+        res.Text(200, "report ready")
+    })
+
+    var srv = http.Server{Addr: "127.0.0.1:0", Handler: r}
+    srv.Listen()?
+    var serving = srv.Serve()
+    var base = srv.URL()
+
+    await call(base, "POST", "/todos", "{\"title\": \"write the docs\"}")?
+    await call(base, "POST", "/todos/1/done", "")?
+    await call(base, "GET", "/todos/1", "")?
+    await call(base, "GET", "/todos/7", "")?
+    await call(base, "GET", "/todos/seven", "")?
+    await call(base, "POST", "/todos", "{\"title\": \"\"}")?
+    await call(base, "POST", "/todos", "{oops")?
+
+    var res = await http.Get(base + "/todos/1")?
+    var t = res.JSON<Todo>()?            // the client decodes into the same struct
+    println(t.Title, t.Done, res.Header("X-Api-Version"))
+
+    var report = http.Get(base + "/report")
+    await started.Recv()?    // the request is now in the handler
+    await srv.Shutdown()     // stop accepting, finish requests in flight
+    var done = await report?
+    println("in flight during shutdown:", done.Status, done.Body)
+    await serving?
+    println("stopped")
+}

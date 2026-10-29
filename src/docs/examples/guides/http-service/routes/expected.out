@@ -1,0 +1,5 @@
+200 /hello/ann -> hello, ann
+200 /hello/bob?greeting=hi -> hi, bob
+200 /health -> ok
+404 /nope -> 404 Not Found
+405 POST /health, Allow: GET

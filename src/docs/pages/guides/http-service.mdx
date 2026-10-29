@@ -1,0 +1,126 @@
+By the end of this guide you will have a small JSON API for a todo list, built on the standard
+`net.http` package: routes with path parameters, typed JSON bodies, one place that maps errors to
+status codes, middleware, a graceful shutdown, and tests that need no network. It assumes you know
+[async functions](/docs/learn/async) and [errors](/docs/learn/errors).
+
+## Step 1: routes and handlers
+
+A handler is an `async` function that takes the request and the response. It fills in the response and
+returns `void!`: an error it returns becomes a `500` unless something handles it (step 3).
+`http.NewRouter` matches the method and the path; a `{name}` segment matches one path segment, and the
+handler reads it with `req.Param("name")`.
+
+<Example id="guides/http-service/routes" />
+
+The program starts the server on port `0`, so the OS picks a free port, and then queries it with the
+`http` client in the same process. That is how the examples on this page check themselves; a deployed
+service listens on a fixed address (step 5). The router answers `404` for an unknown path and `405`
+with an `Allow` header for a known path with the wrong method.
+
+`srv.Serve()` returns a task that runs until the server stops. `Listen()` binds the socket first, so
+`srv.URL()` already knows the port.
+
+## Step 2: JSON in and out
+
+The rest of the guide builds one package, `todo`, with three source files and a test. Every file declares
+`namespace todo`, so they see each other's declarations without imports.
+
+The wire format is a pair of structs. `@json(name: ...)` gives the JSON name of a field; the encoder
+and decoder for a struct are generated at compile time, with no reflection at run time.
+`req.JSON<NewTodo>()` parses the request body into a struct and returns `NewTodo!`, and
+`res.SendJSON(201, t)` encodes a value and sets `Content-Type: application/json`.
+
+<Example id="guides/http-service/app" files={["src/api.zl"]} output="none" />
+
+The handlers are closures over `store`, which is all the dependency injection a service this size needs.
+`Store` guards its slice with a `task.Mutex`, because the server runs every request in its own task and
+two of them can reach the store at the same time. `defer this.mu.Unlock()` releases the lock on every
+path, including the early `return ErrNoTodo`.
+
+## Step 3: map errors to status codes
+
+The handlers above never choose an error status. They return an error, `?` passes it up from
+`store.Get` or `idParam`, and one middleware decides what each kind of error means for the client:
+
+<Example id="guides/http-service/app" files={["src/middleware.zl"]} output="none" />
+
+A middleware is a `func(http.Handler) http.Handler`: it gets the next handler and returns a handler that
+wraps it. `Errors` calls the rest of the chain inside `try`, and when it fails, writes a JSON error body
+instead. The `switch` picks out a `BadRequest` by type, `errors.Is` recognizes the not-found sentinel even
+when it was wrapped with `?("context")`, and everything else becomes a `500` with a generic message, so
+internal details stay on the server. Because `Errors` handled the error and returned normally, the
+server does not add its own `500` page.
+
+`Version` shows the other common shape: do something, then call `next`.
+
+<Callout type="tip">
+The standard library has ready-made middleware: `http.Logging(logger)` for one log event per request,
+`http.Recover()`, `http.Gzip(level)`, `http.CORS(options)`, `http.BodyLimit(n)` and
+`http.TimeoutHandler(h, ms, msg)`.
+</Callout>
+
+## Step 4: put it together
+
+`main` builds the router, adds the middleware with `r.Use` (the first one added is the outermost), starts
+the server and sends it a few requests:
+
+<Example id="guides/http-service/app" files={["src/main.zl"]} />
+
+On the client side `res.JSON<Todo>()` decodes the answer into the same struct the server encoded.
+
+## Step 5: shut down gracefully
+
+`srv.Shutdown()` stops accepting connections, closes idle ones and completes once every request in flight
+has been answered. The `/report` request above was inside its handler when `Shutdown` started, and it
+still got its `200`. After that, the task returned by `Serve` completes and `main` returns.
+
+A deployed service does not shut down on its own: it waits for a signal. Kubernetes, systemd and
+`docker stop` send `SIGTERM`, and Ctrl+C sends `SIGINT`. Replace the demo requests in `main` with:
+
+```zell
+var addr = os.Getenv("ADDR")
+if addr == "" {
+    addr = "127.0.0.1:8080"
+}
+var srv = http.Server{Addr: addr, Handler: r}
+srv.Listen()?
+var serving = srv.Serve()
+println("listening on", srv.URL())
+
+var sig = await os.signal.WaitAny([os.signal.SIGINT, os.signal.SIGTERM])
+println("got", os.signal.Name(sig), "- shutting down")
+await srv.Shutdown()
+await serving?
+```
+
+Once a signal is waited for, its default action (ending the process) is replaced, so the server gets to
+finish its requests. `http.Server` also has limits worth setting in production: `ReadTimeout`,
+`WriteTimeout` and `IdleTimeout` in milliseconds, `MaxBodyBytes`, and `TLS` for HTTPS.
+
+## Step 6: test the handlers
+
+`net.http.test` runs a request through a handler without opening a socket. `http.test.NewRequest`
+builds a server-side request, and `http.test.Serve` passes it through the router and the middleware and
+returns the recorded response. Each test builds a fresh store, so tests do not share state.
+
+<Example id="guides/http-service/app" files={["src/api_test.zl"]} output="none" />
+
+```sh
+zell test -v
+```
+
+<Example id="guides/http-service/app" files={["src/api_test.zl"]} output="test" />
+
+`t.Must(...)` unwraps a `T!` or ends the test with the error. When you want the real network path too
+(TLS, HTTP/2, the client), `http.test.NewServer(h)` starts the handler on a free loopback port.
+
+## The finished program
+
+The whole package, with its manifest:
+
+<Example id="guides/http-service/app" files={["zell.toml", "src/main.zl", "src/api.zl", "src/middleware.zl", "src/api_test.zl"]} />
+
+## Next
+
+- [Use a SQL database](/docs/guides/sql): replace the in-memory `Store` with SQLite.
+- [Testing](/docs/learn/testing) for table tests and benchmarks.

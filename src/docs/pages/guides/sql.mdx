@@ -1,0 +1,100 @@
+By the end of this guide you will have a small bank ledger on SQLite: a schema, inserts with parameters,
+queries that return typed structs, a money transfer that either fully happens or leaves nothing behind,
+nullable columns, and "not found" handled as an error you can test for. Everything goes through
+`database.sql`, the same interface the PostgreSQL driver implements.
+
+The calls are `async`, so you need [async functions](/docs/learn/async), and they return `T!`, so you
+need [errors](/docs/learn/errors).
+
+## Step 1: open a database and create the schema
+
+`database.sqlite` is the SQLite driver. `sqlite.Open(dsn)` returns a `*sql.DB`: a pool of connections
+that every query borrows from. `":memory:"` is a database that lives as long as the program; a file path
+keeps the data on disk.
+
+The program is a package, `bank`, split into four files of one namespace:
+
+<Example id="guides/sql/bank" files={["src/schema.zl"]} output="none" />
+
+`db.Exec(query, args)` runs a statement that returns no rows. Arguments are always a slice, `[]any`, and
+an empty one is written `[]`. A raw string in backquotes keeps the SQL readable across lines.
+
+<Callout type="note">
+SQLite comes from the system: `libsqlite3` on Linux and macOS, and on Windows the application's
+`sqlite3.dll` (next to the executable or on `PATH`) or the system's `winsqlite3.dll` (Windows 10 and
+later). The fully static `linux-amd64-musl` target has no SQLite.
+</Callout>
+
+## Step 2: insert with parameters and query into structs
+
+Never build SQL by pasting values into the string. Pass them as arguments: `?` placeholders take the
+arguments in order, and `:name` placeholders take `sql.Named("name", value)` arguments, whatever their
+order. The driver sends the values separately from the query, so a quote in a name cannot change the
+statement.
+
+<Example id="guides/sql/bank" files={["src/accounts.zl"]} output="none" />
+
+`db.Query<Account>` returns `[]Account!`: every row becomes a struct. Columns match fields by name, where
+a field name is compared in snake case (`CreatedAt` matches `created_at`); `@sql.column("balance")`
+names the column explicitly. The mapping is generated at compile time for `Account`. `db.QueryOne<T>`
+returns a single row, and `T` may also be a plain type, as in `db.QueryOne<int>("select count(*) ...")`.
+`r.LastInsertId` is the id SQLite assigned to the new row.
+
+## Step 3: NULL values
+
+A column that may be `NULL` needs a field that can say "no value". A pointer does: `Email *string` is
+`nil` for `NULL` and points at the string otherwise. `sql.Null<string>` is the alternative, a struct with
+`Value` and `Valid`, if you prefer not to dereference.
+
+To write a `NULL`, pass `nil` as the argument. `Create` stores an empty email that way, and the `any`
+variable lets it hold either `nil` or a `string`.
+
+## Step 4: a transaction with the rollback idiom
+
+A transfer is two updates, and the database must never keep one without the other.
+
+<Example id="guides/sql/bank" files={["src/transfer.zl"]} output="none" />
+
+`db.Begin()` starts a transaction on one connection; the `tx.` methods run inside it. The idiom is
+`defer tx.Rollback()` right after `Begin`: every early `return` and every `?` leaves through the deferred
+rollback, so a failed transfer undoes the debit. After a successful `Commit`, the deferred `Rollback`
+does nothing (it reports `sql.ErrTxDone`, which the `defer` discards).
+
+`db.Transact(f)` packages the same pattern: it begins, calls your async function with the transaction,
+and commits when the function succeeds or rolls back when it fails.
+
+## Step 5: no rows is an error
+
+`QueryOne` with no matching row fails with `sql.ErrNoRows`. Test for it with `errors.Is`, which also finds
+it under context added by `?("...")`, and turn it into your own "not found" where your API needs one.
+`Query` with no matching rows is not an error: it returns an empty slice.
+
+## The finished program
+
+`main` creates two accounts, moves money, tries two transfers that must fail, and looks up an account that
+does not exist:
+
+<Example id="guides/sql/bank" files={["src/main.zl"]} />
+
+The first failed transfer hits the schema's `check (balance >= 0)`: the debit fails inside the
+transaction, `?("debit bob")` adds context, and the rollback leaves both balances as they were. The second
+fails on the missing account after the debit had already succeeded, and the rollback undoes that debit.
+
+The whole package:
+
+<Example id="guides/sql/bank" files={["zell.toml", "src/main.zl", "src/schema.zl", "src/accounts.zl", "src/transfer.zl"]} output="none" />
+
+## Moving to PostgreSQL
+
+Only the opening line changes: `postgres.Open("postgres://user:pass@localhost:5432/bank?sslmode=disable")`
+returns a `*sql.DB!` with the same methods, and `Query<T>`, transactions and `ErrNoRows` work as above.
+The driver is written in Zell over `net` and `net.tls`, so there is no C library to install. Two details
+differ. PostgreSQL's placeholders are `$1`, `$2`, so write `:name` parameters if the same SQL should run on
+both: `database.sql` rewrites them to each driver's style. And `LastInsertId` is always `0` on PostgreSQL;
+use `insert ... returning id` with `QueryOne<int>` instead. The schema needs PostgreSQL types
+(`bigserial`, `bigint`) as usual.
+
+## Next
+
+- [Write an HTTP service](/docs/guides/http-service): put this store behind a JSON API.
+- [Memory and resources](/docs/learn/memory): how `defer` and `Drop` release connections and other resources.

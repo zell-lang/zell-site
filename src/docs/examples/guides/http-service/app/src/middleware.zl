@@ -1,0 +1,36 @@
+namespace todo
+
+import net
+
+// A middleware takes the next handler and returns a handler that wraps it.
+
+// Errors maps handler errors to status codes and a JSON body.
+func Errors() func(http.Handler) http.Handler {
+    return func(next http.Handler) http.Handler {
+        return http.Func(async func(req *http.Request, res *http.Response) void! {
+            try await next.Serve(req, res) catch err {
+                switch err {
+                    case BadRequest b:
+                        res.SendJSON(400, ErrorBody{Error: b.Text})
+                    default:
+                        if errors.Is(err, ErrNoTodo) {
+                            res.SendJSON(404, ErrorBody{Error: err.Message()})
+                        } else {
+                            // details stay on the server
+                            res.SendJSON(500, ErrorBody{Error: "internal error"})
+                        }
+                }
+            }
+        })
+    }
+}
+
+// Version adds a header to every response.
+func Version(v string) func(http.Handler) http.Handler {
+    return func(next http.Handler) http.Handler {
+        return http.Func(async func(req *http.Request, res *http.Response) void! {
+            res.SetHeader("X-Api-Version", v)
+            await next.Serve(req, res)?
+        })
+    }
+}

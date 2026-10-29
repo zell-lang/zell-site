@@ -1,0 +1,42 @@
+namespace bank
+
+import database
+import io
+
+async func show(db *sql.DB) void! {
+    for a in await Richest(db, 0)? {
+        var email = "no email"
+        if a.Email != nil {
+            email = *a.Email
+        }
+        println(" ", a.Owner, a.Cents, email)
+    }
+}
+
+async func main() void! {
+    var db = await Open()?
+    defer db.Close()
+
+    _ = await Create(db, "ann", "ann@example.com", 10000)?
+    _ = await Create(db, "bob", "", 2500)?
+    await show(db)?
+
+    await Transfer(db, "ann", "bob", 4000)?
+    println("after a transfer:")
+    await show(db)?
+
+    try await Transfer(db, "bob", "ann", 99999) catch err {
+        println("failed:", err)              // the CHECK constraint fired
+    }
+    try await Transfer(db, "ann", "carol", 100) catch err {
+        println("failed:", err)
+    }
+    println("unchanged:")
+    await show(db)?
+
+    try await Find(db, "dave") catch err {
+        println(errors.Is(err, sql.ErrNoRows), err)
+    }
+    var total = await db.QueryOne<int>("select sum(balance) from accounts", [])?
+    println("total:", total)
+}

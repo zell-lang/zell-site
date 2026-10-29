@@ -1,0 +1,12 @@
+  ann 10000 ann@example.com
+  bob 2500 no email
+after a transfer:
+  bob 6500 no email
+  ann 6000 ann@example.com
+failed: debit bob: sqlite: CHECK constraint failed: balance >= 0
+failed: no account carol
+unchanged:
+  bob 6500 no email
+  ann 6000 ann@example.com
+true sql: no rows in result set
+total: 12500

@@ -311,6 +311,14 @@
     "zell": "0.1.5",
     "hash": "c36d2cec"
   },
+  "guides/http-service/app": {
+    "zell": "0.1.5",
+    "hash": "c4ae9dab"
+  },
+  "guides/http-service/routes": {
+    "zell": "0.1.5",
+    "hash": "e9bcacdc"
+  },
   "guides/json/bad-input": {
     "zell": "0.1.5",
     "hash": "6f82b1b0"
@@ -326,6 +334,10 @@
   "guides/json/report": {
     "zell": "0.1.5",
     "hash": "88652920"
+  },
+  "guides/sql/bank": {
+    "zell": "0.1.5",
+    "hash": "fd8db871"
   },
   "hello/first": {
     "zell": "0.1.5",
@@ -434,6 +446,22 @@
   "learn/enums/plain": {
     "zell": "0.1.5",
     "hash": "d8dc5786"
+  },
+  "learn/generics/constraints": {
+    "zell": "0.1.5",
+    "hash": "d468436c"
+  },
+  "learn/generics/enums": {
+    "zell": "0.1.5",
+    "hash": "e2122744"
+  },
+  "learn/generics/functions": {
+    "zell": "0.1.5",
+    "hash": "4fe020ef"
+  },
+  "learn/generics/types": {
+    "zell": "0.1.5",
+    "hash": "ab03e5eb"
   },
   "learn/interfaces/defaults": {
     "zell": "0.1.5",

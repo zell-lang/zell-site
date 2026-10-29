@@ -1,0 +1,35 @@
+namespace hello
+
+import io
+import net
+
+async func greet(req *http.Request, res *http.Response) void! {
+    var name = req.Param("name")              // the {name} segment of the path
+    var greeting = req.QueryValue("greeting")  // ?greeting=..., "" when absent
+    if greeting == "" {
+        greeting = "hello"
+    }
+    res.Text(200, greeting + ", " + name + "\n")
+}
+
+async func main() void! {
+    var r = http.NewRouter()
+    r.Get("/hello/{name}", greet)
+    r.Get("/health", async func(req *http.Request, res *http.Response) void! {
+        res.Text(200, "ok\n")
+    })
+
+    var srv = http.Server{Addr: "127.0.0.1:0", Handler: r}   // port 0: any free port
+    srv.Listen()?
+    var serving = srv.Serve()
+
+    for path in ["/hello/ann", "/hello/bob?greeting=hi", "/health", "/nope"] {
+        var res = await http.Get(srv.URL() + path)?
+        print(res.Status, " ", path, " -> ", res.Body)
+    }
+    var post = await http.Post(srv.URL() + "/health", "", "text/plain")?
+    print(post.Status, " POST /health, Allow: ", post.Header("Allow"), "\n")
+
+    await srv.Shutdown()
+    await serving?
+}

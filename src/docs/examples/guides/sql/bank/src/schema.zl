@@ -1,0 +1,19 @@
+namespace bank
+
+import database
+
+const schema = `
+create table accounts (
+    id      integer primary key,
+    owner   text not null unique,
+    email   text,
+    balance integer not null check (balance >= 0)
+)`
+
+// Open creates an in-memory database with the schema. A file path
+// instead of ":memory:" keeps the data between runs.
+async func Open() *sql.DB! {
+    var db = sqlite.Open(":memory:")
+    _ = await db.Exec(schema, [])?
+    return db
+}

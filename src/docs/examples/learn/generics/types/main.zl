@@ -1,0 +1,58 @@
+namespace cache
+
+import io
+
+// A generic struct: K and V are fixed when you name an instance.
+struct Lru<K: Comparable, V> {
+    cap int
+    order []K
+    items map[K]V
+
+    static func New(cap int) Lru<K, V> {
+        return Lru<K, V>{cap: cap, items: map[K]V{}}
+    }
+
+    func Put(k K, v V) {
+        if !this.Has(k) {
+            if len(this.order) == this.cap {
+                delete(this.items, this.order[0])
+                this.order = this.order[1..]
+            }
+            this.order = append(this.order, k)
+        }
+        this.items[k] = v
+    }
+
+    func Has(k K) bool {
+        var (_, ok) = this.items[k]
+        return ok
+    }
+
+    func Keys() []K {
+        return this.order
+    }
+}
+
+// A generic method on an ordinary struct.
+struct Tagger {
+    Prefix string
+
+    func Tag<T>(x T) string {
+        return fmt.Format("{0}{1}", this.Prefix, x)
+    }
+}
+
+func main() {
+    var c = Lru<string, int>.New(2)
+    c.Put("a", 1)
+    c.Put("b", 2)
+    c.Put("c", 3)                // evicts "a"
+    println(c.Keys(), c.Has("a"))
+
+    var ids = Lru<int, string>.New(8)   // a second, separate instance
+    ids.Put(7, "seven")
+    println(ids.Keys())
+
+    var t = Tagger{Prefix: "#"}
+    println(t.Tag(42), t.Tag("x"), t.Tag<float>(1))
+}

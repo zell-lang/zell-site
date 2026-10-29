@@ -1,0 +1,44 @@
+namespace physics
+
+import io
+
+// An interface as a constraint: the body may call Mass().
+interface Massive {
+    func Mass() float
+}
+
+struct Planet {
+    Name string
+    Kg float
+    func Mass() float { return this.Kg }
+}
+
+func Total<T: Massive>(xs []T) float {
+    var sum = 0.0
+    for x in xs {
+        sum += x.Mass()          // a direct call to Planet.Mass, no table
+    }
+    return sum
+}
+
+// Add: any T with +, including structs with an Add method.
+func Sum<T: Add>(xs []T) T {
+    var acc T                    // the zero value of T
+    for x in xs {
+        acc += x
+    }
+    return acc
+}
+
+struct Vec {
+    X int
+    Y int
+    func Add(o Vec) Vec { return Vec{X: this.X + o.X, Y: this.Y + o.Y} }
+}
+
+func main() {
+    println(Total([Planet{Name: "Mars", Kg: 6.25}, Planet{Name: "Moon", Kg: 0.75}]))
+    println(Sum([1, 2, 3]), Sum([0.5, 0.25]), Sum(["a", "b", "c"]))
+    var v = Sum([Vec{X: 1, Y: 2}, Vec{X: 10, Y: 20}])
+    println(v.X, v.Y)
+}

@@ -1,0 +1,92 @@
+namespace todo
+
+import net
+
+// The wire format: field names on the left, JSON names in @json.
+struct Todo {
+    @json(name: "id")    Id    int
+    @json(name: "title") Title string
+    @json(name: "done")  Done  bool
+}
+
+struct NewTodo {
+    @json(name: "title") Title string
+}
+
+struct ErrorBody {
+    @json(name: "error") Error string
+}
+
+const ErrNoTodo = error("todo not found")
+
+// BadRequest is anything the client got wrong.
+struct BadRequest {
+    Text string
+    func Message() string { return this.Text }
+}
+
+// Store keeps the todos in memory. Handlers run as concurrent tasks,
+// so every access takes the lock.
+struct Store {
+    mu    task.Mutex
+    items []Todo
+
+    async func Add(title string) Todo {
+        await this.mu.Lock()
+        defer this.mu.Unlock()
+        var t = Todo{Id: len(this.items) + 1, Title: title}
+        this.items = append(this.items, t)
+        return t
+    }
+
+    async func Get(id int) Todo! {
+        await this.mu.Lock()
+        defer this.mu.Unlock()
+        if id < 1 || id > len(this.items) {
+            return ErrNoTodo
+        }
+        return this.items[id - 1]
+    }
+
+    async func Finish(id int) Todo! {
+        await this.mu.Lock()
+        defer this.mu.Unlock()
+        if id < 1 || id > len(this.items) {
+            return ErrNoTodo
+        }
+        this.items[id - 1].Done = true
+        return this.items[id - 1]
+    }
+}
+
+func idParam(req *http.Request) int! {
+    return try strconv.Atoi(req.Param("id")) catch err {
+        return BadRequest{Text: "id must be a number"}
+    }
+}
+
+// Routes wires the handlers to paths. Handlers return errors; they never
+// pick an error status themselves.
+func Routes(store *Store) *http.Router {
+    var r = http.NewRouter()
+    r.Post("/todos", async func(req *http.Request, res *http.Response) void! {
+        var in = try req.JSON<NewTodo>() catch err {
+            return BadRequest{Text: "invalid JSON: " + err.Message()}
+        }
+        if in.Title == "" {
+            return BadRequest{Text: "title is required"}
+        }
+        var t = await store.Add(in.Title)
+        res.SetHeader("Location", fmt.Format("/todos/{0}", t.Id))
+        res.SendJSON(201, t)
+    })
+    r.Get("/todos/{id}", async func(req *http.Request, res *http.Response) void! {
+        var t = await store.Get(idParam(req)?)?
+        res.SendJSON(200, t)
+    })
+    r.Post("/todos/{id}/done", async func(req *http.Request, res *http.Response) void! {
+        var t = await store.Finish(idParam(req)?)?
+        res.SendJSON(200, t)
+    })
+    return r
+}

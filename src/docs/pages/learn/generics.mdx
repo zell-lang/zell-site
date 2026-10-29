@@ -1,0 +1,105 @@
+Generics let you write a function or a type once and use it with many types, checked at compile time.
+Type parameters go in angle brackets after the name, as in C#: `func Largest<T: Ordered>(xs []T) T`.
+The compiler makes a separate copy of the code for each set of type arguments, so generic code runs as
+fast as code written by hand for one type.
+
+## Generic functions
+
+A type parameter is a name, optionally followed by a constraint: `<T>`, `<T: Ordered>`, `<K, V>`. In the
+body you can do with a `T` only what its constraint allows. Without a constraint that is assigning,
+passing and returning values, and `var z T` for the zero value.
+
+<Example id="learn/generics/functions" />
+
+You rarely write type arguments at a call. The compiler infers them by matching the parameter types
+against the arguments: `[]T` against `[]int` gives `T = int`, a `func(T) bool` parameter against a
+lambda's type, and so on. Untyped constants are matched last, so `Clamp(ratio, 0, 1)` is `Clamp<float>`
+because `ratio` is a `float`. Write the arguments when nothing determines them, like the empty slice in
+`Largest<float>([])`, or when you want a different type than the constants would give.
+
+Lambda parameters need no types when the generic parameters are already known from the other arguments:
+`CountIf(words, w => len(w) > 2)` takes `T = string` from `words`, so `w` is a `string`.
+
+## Generic types
+
+Structs and enums take type parameters too. Name an instance with its arguments: `Lru<string, int>` in a
+type, `Lru<string, int>.New(2)` for a static function, `Lru<K, V>{...}` for a literal inside the generic
+code. Methods of a generic struct use its parameters freely. A method can also have type parameters of
+its own, even on an ordinary struct, like `Tag<T>` below.
+
+<Example id="learn/generics/types" />
+
+The standard library's `collections` namespace (`List<T>`, `Map<K, V>`, `Set<T>`, `Queue<T>`,
+`Stack<T>`) is written this way, in Zell.
+
+Interfaces cannot be generic yet.
+
+<Callout type="go">
+Go writes `func Largest[T cmp.Ordered](xs []T) T` and `Lru[string, int]`; Zell uses `<...>` and a colon
+before the constraint. Methods in Go cannot have type parameters of their own; in Zell they can.
+</Callout>
+
+## Constraints
+
+A constraint says what the body may do with `T`, and the compiler checks the body against it once, before
+any instance exists. Comparing two values of an unconstrained `T` fails in the declaration itself:
+
+```text
+error: operator > is not defined on type parameter T: its constraint does not allow it (constrain it: T: Ordered)
+```
+
+| Constraint | Satisfied by | Allows |
+|---|---|---|
+| none | every type | assign, pass, return, `var z T` |
+| `Comparable` | numbers, `bool`, `char`, `string`, pointers, plain enums | `==`, `!=`, map keys |
+| `Equatable` | `Comparable` types and types with `Equals(other T) bool` | `==`, `!=` |
+| `Ordered` | numbers, `string`, `char`, types with `Compare(other T) int` | `<`, `<=`, `>`, `>=`, `==`, `!=`, `+` |
+| `Add`, `Sub`, `Mul`, `Div`, `Rem`, `Neg` | numbers with that operator (`Add` also `string`), types with the operator method | that operator and its `op=` |
+| an interface | types with its methods | calling those methods, converting to the interface |
+
+A type parameter has at most one constraint. Operator constraints work with the
+[operator methods](/docs/learn/structs#printing-and-comparing) of your own types, so one `Sum` serves
+`int`, `string` and a struct with `Add`:
+
+<Example id="learn/generics/constraints" />
+
+A type that does not satisfy a constraint is reported where you use it, naming what is missing:
+
+```text
+error: type Vec does not satisfy constraint Massive: missing method Mass (type parameter T of Total)
+```
+
+## Generic enums
+
+An enum with type parameters is the usual way to say "a value or nothing" or "one of two results".
+Create a variant through the instance, `Maybe<int>.Some(1)`. In a `switch` pattern you leave the type
+arguments out: `case Maybe.Some(v)`, since the type of the value already fixes them.
+
+<Example id="learn/generics/enums" />
+
+For the [enum basics](/docs/learn/enums), the rules are the same: methods see `T`, and a switch that
+covers every variant needs no `return` after it.
+
+## How generics are compiled
+
+Zell compiles generics by *monomorphization*, like Rust and like C# for value types. Each different set
+of type arguments produces its own copy of the function or type, with `T` replaced by the real type:
+`Largest<int>` and `Largest<string>` are two functions in the binary. The code generator and the runtime
+never see a type parameter, and `zell check --dump-hir` shows each instance by name.
+
+The benefit is speed. Inside `Largest<int>`, `>` is a machine comparison; inside `Total<Planet>`,
+`x.Mass()` is a direct call to `Planet.Mass` that LLVM can inline. Through an interface the same call
+would go through a method table. In the `defer_errors_iface` benchmark (`--release`, 16-core AMD Ryzen 7
+8845HS, Fedora 42, October 2026), summing 100 million values took 0.24 times as long as Go with a generic
+function, against 1.24 times Go through an interface.
+
+The cost is size and compile time: every instance is more code. For a 15-line sort function, seven more
+instantiations added 7 KB to a 121 KB release binary (zell 0.1.5, windows-amd64): about 1 KB each. That is
+rarely a problem, but a large generic function used with dozens of types is. In that case keep the
+generic part thin and move the bulk into a non-generic function, or take an interface where speed does
+not matter.
+
+## Next
+
+[Errors](/docs/learn/errors): how a function that can fail says so in its type, and how callers pass the
+error up or handle it on the spot.

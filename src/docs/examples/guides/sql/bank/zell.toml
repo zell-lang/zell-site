@@ -1,0 +1,5 @@
+[package]
+name = "bank"
+version = "0.1.0"
+namespace = "bank"
+entry = "src/main.zl"

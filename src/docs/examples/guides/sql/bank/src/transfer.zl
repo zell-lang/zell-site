@@ -1,0 +1,23 @@
+namespace bank
+
+import database
+
+// Transfer moves cents between two accounts, or changes nothing.
+async func Transfer(db *sql.DB, from string, to string, cents int) void! {
+    var tx = await db.Begin()?
+    defer tx.Rollback()                    // after Commit this does nothing
+
+    var out = await tx.Exec(
+        "update accounts set balance = balance - ? where owner = ?", [cents, from],
+    )?("debit " + from)
+    if out.RowsAffected != 1 {
+        return error("no account " + from)
+    }
+    var inc = await tx.Exec(
+        "update accounts set balance = balance + ? where owner = ?", [cents, to],
+    )?
+    if inc.RowsAffected != 1 {
+        return error("no account " + to)     // the debit above is rolled back
+    }
+    await tx.Commit()?
+}

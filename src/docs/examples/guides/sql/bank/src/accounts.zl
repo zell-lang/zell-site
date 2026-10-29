@@ -1,0 +1,38 @@
+namespace bank
+
+import database
+
+// Columns map to fields by name (snake_case of the field name), or by
+// @sql.column. A pointer field receives NULL as nil.
+struct Account {
+    Id    int
+    Owner string
+    Email *string
+    @sql.column("balance") Cents int
+}
+
+async func Create(db *sql.DB, owner string, email string, cents int) int! {
+    var mail any = nil                     // an empty email is stored as NULL
+    if email != "" {
+        mail = email
+    }
+    var r = await db.Exec(
+        "insert into accounts (owner, email, balance) values (?, ?, ?)",
+        [owner, mail, cents],
+    )?
+    return r.LastInsertId
+}
+
+async func Find(db *sql.DB, owner string) Account! {
+    return await db.QueryOne<Account>(
+        "select * from accounts where owner = :owner",
+        [sql.Named("owner", owner)],
+    )?
+}
+
+async func Richest(db *sql.DB, min int) []Account! {
+    return await db.Query<Account>(
+        "select * from accounts where balance >= ? order by balance desc",
+        [min],
+    )?
+}

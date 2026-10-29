@@ -1,0 +1,6 @@
+=== RUN   TestCreateAndGet
+--- PASS: TestCreateAndGet (0.02s)
+=== RUN   TestErrorStatuses
+--- PASS: TestErrorStatuses (0.02s)
+PASS
+ok  	2 passed, 0 failed, 0 skipped (0.03s)
