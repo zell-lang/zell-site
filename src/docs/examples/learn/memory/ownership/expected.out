@@ -1,0 +1,6 @@
+conn 1 sends hello
+conn 1 closed
+after send
+idle connections: 1
+conn 2 closed
+end of main

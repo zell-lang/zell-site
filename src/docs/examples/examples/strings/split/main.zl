@@ -1,0 +1,22 @@
+namespace split
+
+import io
+
+func main() {
+    var parts = strings.Split("red,green,blue", ",")
+    println(parts, len(parts))
+    println(strings.Join(parts, " | "))
+
+    // SplitN stops after n pieces: handy for "key=value" lines.
+    var kv = strings.SplitN("url=https://x.org/?a=1", "=", 2)
+    println(kv[0], "->", kv[1])
+
+    // Fields splits on any run of whitespace and drops empty pieces.
+    var words = strings.Fields("  the quick\tbrown \n fox ")
+    println(words, len(words))
+
+    // Trim removes surrounding whitespace; the others remove what you name.
+    println("[" + strings.Trim("   padded   ") + "]")
+    println(strings.TrimPrefix("v1.2.3", "v"), strings.TrimSuffix("main.zl", ".zl"))
+    println(strings.TrimLeft("xxhixx", "x"), strings.TrimRight("xxhixx", "x"))
+}

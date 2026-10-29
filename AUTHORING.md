@@ -69,3 +69,10 @@ Several authors write at once, each owning their pages and example directories. 
 `nav.json`, shared components, styles, scripts or anyone else's pages; propose such changes in
 your report instead. Do not commit, push or deploy: the maintainer checks everything, records
 `verified.json`, flips the page status in `nav.json`, and publishes.
+
+## Pitfalls found so far
+
+- A namespace may not reuse a standard-library root (`namespace errors`, `namespace text`): the
+  compiler rejects it and then reports follow-on errors that hide the first one. Pick another name.
+- Examples must not depend on map iteration order or on task scheduling: sort keys
+  (`maps.SortedKeys`), and run async examples several times before trusting their output.

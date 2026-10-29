@@ -1,0 +1,29 @@
+namespace basics
+
+import io
+
+func main() {
+    var nums = [5, 3, 8]
+    println(nums, "len:", len(nums))
+
+    // append returns the new slice: always assign it back.
+    nums = append(nums, 1)
+    nums = append(nums, 9, 4)
+    println(nums)
+
+    var more = [10, 20]
+    nums = append(nums, more...)
+    println(nums)
+
+    println("first:", nums[0], "last:", nums[len(nums) - 1])
+    nums[1] = 30
+    println(nums)
+
+    // An unset slice is empty and ready for append.
+    var names []string
+    println(len(names))
+    names = append(names, "ann")
+    for i, n in names {
+        println(i, n)
+    }
+}

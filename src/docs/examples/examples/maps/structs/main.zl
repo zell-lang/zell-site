@@ -1,0 +1,33 @@
+namespace structs
+
+import io
+
+struct Account {
+    Owner   string
+    Balance int
+}
+
+func main() {
+    // Struct values are copied out of the map: write the copy back.
+    var accounts = map[int]Account{1: Account{Owner: "ann", Balance: 100}}
+    var a = accounts[1]
+    a.Balance += 50
+    accounts[1] = a
+    println(accounts[1].Balance)
+
+    // Store pointers to update in place.
+    var byName = map[string]*Account{}
+    byName["bob"] = &Account{Owner: "bob", Balance: 10}
+    byName["bob"].Balance += 5
+    println(byName["bob"].Balance)
+
+    // Maps are references: an alias sees the same entries.
+    var alias = accounts
+    alias[2] = Account{Owner: "cy", Balance: 0}
+    println(len(accounts))
+
+    // maps.Clone makes an independent copy.
+    var snapshot = maps.Clone(accounts)
+    delete(accounts, 2)
+    println(len(accounts), len(snapshot))
+}

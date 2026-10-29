@@ -1,0 +1,9 @@
+200 ok
+301 redirect
+400 other
+404 not found
+503 server error
+small medium large
+go collects garbage
+zell frees memory without a collector
+rust frees memory without a collector

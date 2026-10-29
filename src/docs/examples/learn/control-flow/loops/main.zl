@@ -1,0 +1,49 @@
+namespace loops
+
+import io
+
+func main() {
+    // A half-open range: 0, 1, 2.
+    for i in 0..3 {
+        println("i =", i)
+    }
+
+    // Elements of a slice, with or without the index.
+    var langs = ["go", "zell", "rust"]
+    for lang in langs {
+        println(lang, len(lang))
+    }
+    for i, lang in langs {
+        if i == 1 {
+            continue
+        }
+        println(i, lang)
+    }
+
+    // Keys and values of a map, in no particular order.
+    var stock = map[string]int{"bolts": 4, "nuts": 6}
+    var total = 0
+    for _, n in stock {
+        total += n
+    }
+    println("in stock:", total)
+
+    // A condition only: the while loop.
+    var n = 100
+    var steps = 0
+    for n > 1 {
+        n /= 3
+        steps += 1
+    }
+    println("steps:", steps)
+
+    // No condition: loop until break.
+    var x = 1
+    for {
+        x *= 2
+        if x > 50 {
+            break
+        }
+    }
+    println("x:", x)
+}

@@ -1,0 +1,24 @@
+namespace sessions
+
+import io
+
+struct Session {
+    Id   int
+    Peer *Session                   // strong in both directions: a cycle
+
+    func Drop() {
+        println("drop session", this.Id)
+    }
+}
+
+func pair() {
+    var a = new Session{Id: 1}
+    var b = new Session{Id: 2, Peer: a}
+    a.Peer = b
+}   // a and b keep each other alive: reference counting alone cannot free them
+
+func main() {
+    pair()
+    println("after pair")
+    println("collected:", runtime.CollectCycles())
+}

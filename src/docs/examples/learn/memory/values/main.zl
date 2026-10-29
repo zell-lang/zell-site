@@ -1,0 +1,25 @@
+namespace shapes
+
+import io
+
+struct Point {
+    X int
+    Y int
+}
+
+func main() {
+    var a = Point{X: 1, Y: 2}
+    var b = a                   // structs are values: b is a copy
+    b.X = 10
+    println(a.X, b.X)
+
+    var p = new Point{X: 1, Y: 2}
+    var q = p                   // a second reference to one heap object
+    q.X = 10
+    println(p.X, q.X)
+
+    var xs = [1, 2, 3]
+    var ys = xs                 // slices share their backing array
+    ys[0] = 100
+    println(xs)
+}

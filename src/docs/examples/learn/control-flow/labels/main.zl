@@ -1,0 +1,30 @@
+namespace seating
+
+import io
+
+// Finds the first free seat; "x" is taken, "!" closes the rest of a row.
+func firstFree(rows [][]string) (int, int) {
+    var (row, seat) = (-1, -1)
+    search:
+    for i, r in rows {
+        for j, s in r {
+            switch s {
+                case "!":
+                    continue search   // next row
+                case "":
+                    (row, seat) = (i, j)
+                    break search      // leave both loops
+            }
+        }
+    }
+    return (row, seat)
+}
+
+func main() {
+    var hall = [
+        ["x", "x", "!", ""],
+        ["x", "", ""],
+    ]
+    println(firstFree(hall))
+    println(firstFree([["x"], ["!"]]))
+}

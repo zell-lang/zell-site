@@ -1,0 +1,26 @@
+namespace stats
+
+import io
+
+// nums is a []int holding the remaining arguments.
+func sum(nums ...int) int {
+    var total = 0
+    for n in nums {
+        total += n
+    }
+    return total
+}
+
+func report(label string, values ...int) {
+    println(label, len(values), sum(values...))
+}
+
+func main() {
+    println(sum(), sum(1, 2, 3))
+
+    var scores = [90, 75, 60]
+    println(sum(scores...))      // pass a slice as is
+
+    report("scores:", scores...)
+    report("none:")
+}

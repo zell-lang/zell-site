@@ -1,0 +1,41 @@
+namespace billing
+
+import io
+
+// Only types of this namespace can implement Payment.
+sealed interface Payment {
+    func Amount() int
+}
+
+struct Card {
+    Last4 string
+    Cents int
+    func Amount() int { return this.Cents }
+}
+
+struct Transfer {
+    Iban string
+    Cents int
+    func Amount() int { return this.Cents }
+}
+
+struct Voucher {
+    Code string
+    func Amount() int { return 500 }
+}
+
+// No default: the compiler checks that every implementation has a case.
+func fee(p Payment) int {
+    switch p {
+        case Card c:     return c.Cents * 3 / 100
+        case Transfer _: return 25
+        case Voucher _:  return 0
+    }
+}
+
+func main() {
+    var payments []Payment = [Card{Last4: "4242", Cents: 10000}, Transfer{Cents: 10000}, Voucher{Code: "WELCOME"}]
+    for p in payments {
+        println(p.Amount(), fee(p))
+    }
+}

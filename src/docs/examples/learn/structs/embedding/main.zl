@@ -1,0 +1,33 @@
+namespace zoo
+
+import io
+
+struct Animal {
+    Name string
+
+    func Sound() string {
+        return "..."
+    }
+
+    func Intro() string {
+        return this.Name + " says " + this.Sound()
+    }
+}
+
+struct Dog {
+    Animal                      // embedded: no field name
+    Breed string
+
+    func Sound() string {
+        return "woof"
+    }
+}
+
+func main() {
+    var d = Dog{Animal: Animal{Name: "Rex"}, Breed: "beagle"}
+    println(d.Name, d.Breed)    // Name is promoted from Animal
+    println(d.Sound(), d.Animal.Sound())
+    println(d.Intro())          // Animal.Intro calls Animal.Sound
+    d.Name = "Max"
+    println(d.Animal.Name)
+}

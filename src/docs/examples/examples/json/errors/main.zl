@@ -1,0 +1,32 @@
+namespace orders
+
+import encoding
+import io
+
+struct Item {
+    Sku string
+    Qty int
+}
+
+struct Order {
+    Id    int
+    Items []Item
+}
+
+func load(text string) {
+    try json.Parse<Order>(text) catch err {
+        println("error:", err)
+        return
+    }
+    println("ok")
+}
+
+func main() {
+    load(`{"Id": 1, "Items": [{"Sku": "a1", "Qty": 2}]}`)
+    // The message names the path of the bad value.
+    load(`{"Id": 1, "Items": [{"Sku": "a1", "Qty": 2}, {"Sku": "b2", "Qty": "two"}]}`)
+    load(`{"Id": 1.5}`)
+    // Syntax errors say what was expected.
+    load(`{"Id": 1, "Items": [}`)
+    load(`{"Id": 1} trailing`)
+}

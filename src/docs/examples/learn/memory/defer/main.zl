@@ -1,0 +1,30 @@
+namespace jobs
+
+import io
+
+struct Lease {
+    job string
+
+    func Drop() {
+        println("release lease", this.job)
+    }
+}
+
+func run(job string, attempt int) void! {
+    var lease = Lease{job: job}
+    defer println("finish", job, "attempt", attempt)  // arguments are evaluated now
+    attempt += 1
+    if job == "broken" {
+        return error("cannot run " + job)
+    }
+    println("run", lease.job)
+}
+
+func main() {
+    try run("backup", 1) catch err {
+        println("error:", err)
+    }
+    try run("broken", 1) catch err {
+        println("error:", err)
+    }
+}

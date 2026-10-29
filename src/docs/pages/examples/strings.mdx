@@ -1,0 +1,51 @@
+Strings in Zell are immutable UTF-8 bytes. `len` counts bytes, iteration yields `char` code points,
+and the `strings`, `fmt` and `strconv` namespaces need no import. The language rules are in
+[Basics](/docs/learn/basics).
+
+## Basics
+
+Concatenate with `+`, compare with `==` and `<`. Raw strings in backticks keep backslashes as typed.
+
+<Example id="examples/strings/basics" />
+
+## Formatting
+
+`fmt.Format` fills `{N}` placeholders and prints each value the way `println` does. `fmt.Sprintf`
+takes Go verbs when you need widths, precision or another base.
+
+<Example id="examples/strings/format" />
+
+## Building strings
+
+`strings.Builder` appends into one buffer, so building a long string in a loop does not copy it at each
+step.
+
+<Example id="examples/strings/builder" />
+
+## Splitting and trimming
+
+<Example id="examples/strings/split" />
+
+## Searching and replacing
+
+Offsets returned by `Index` and `LastIndex` are byte offsets; `-1` means not found.
+
+<Example id="examples/strings/search" />
+
+## Bytes, chars and UTF-8
+
+Indexing gives a byte; a `for` loop decodes UTF-8 and gives the byte offset of each `char`.
+`strings.Runes` converts to `[]char` when you need random access to characters.
+
+<Example id="examples/strings/runes" />
+
+## Converting to and from numbers
+
+Parsing can fail, so `strings.ToInt` returns `int!`: pick a default with `try … else` or handle the
+error with `try … catch` (see [Errors](/docs/learn/errors)).
+
+<Example id="examples/strings/convert" />
+
+## Next
+
+[Slices](/docs/examples/slices): appending, sub-slices, sorting and searching.

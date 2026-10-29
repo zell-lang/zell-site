@@ -1,0 +1,21 @@
+namespace search
+
+import io
+
+func main() {
+    var s = "go gopher goes"
+
+    println(strings.Contains(s, "gopher"), strings.Contains(s, "rust"))
+    println(strings.HasPrefix(s, "go "), strings.HasSuffix(s, "goes"))
+
+    // Index and LastIndex return a byte offset, or -1.
+    println(strings.Index(s, "go"), strings.LastIndex(s, "go"), strings.Index(s, "x"))
+    println(strings.Count(s, "go"))
+
+    // Replace replaces every occurrence.
+    println(strings.Replace(s, "go", "GO"))
+
+    // Case-insensitive comparison, Unicode-aware.
+    println(strings.EqualFold("Zell", "ZELL"), strings.EqualFold("Привет", "пРИВЕТ"))
+    println(strings.ContainsAny("hello", "xyz"), strings.IndexAny("golang", "ln"))
+}

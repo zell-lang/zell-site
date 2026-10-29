@@ -1,0 +1,23 @@
+namespace report
+
+import io
+
+async func slowQuery() string! {
+    await task.Delay(60000)
+    task.CheckCancelled()?          // a cancelled Delay returns early, without an error
+    return "rows"
+}
+
+async func fastQuery() string! {
+    await task.Delay(1)
+    return "cached rows"
+}
+
+async func main() void! {
+    println(await task.WithTimeout(5000, fastQuery)?)
+    var rows = try await task.WithTimeout(20, slowQuery) catch err {
+        println("query:", err, "| cancelled:", errors.Is(err, task.ErrCancelled))
+        return
+    }
+    println(rows)
+}

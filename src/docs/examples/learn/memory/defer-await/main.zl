@@ -1,0 +1,31 @@
+namespace server
+
+import io
+
+struct Conn {
+    id int
+
+    // Close has to wait, so it is async: a Drop cannot await.
+    async func Close() {
+        await task.Yield()
+        println("conn", this.id, "flushed and closed")
+    }
+}
+
+async func handle(id int) void! {
+    var c = new Conn{id: id}
+    defer await c.Close()           // awaited on every exit path
+    if id == 2 {
+        return error("bad request on conn 2")
+    }
+    await task.Yield()
+    println("conn", id, "served")
+}
+
+async func main() {
+    for id in 1..3 {
+        try await handle(id) catch err {
+            println("error:", err)
+        }
+    }
+}

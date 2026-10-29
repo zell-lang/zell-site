@@ -1,0 +1,42 @@
+namespace counters
+
+import io
+
+struct Counter {
+    name string                 // lowercase: private to the namespace
+    n int
+
+    static func New(name string) Counter {
+        return Counter{name: name}
+    }
+
+    func Inc() {
+        this.n += 1             // this is a *Counter: the change sticks
+    }
+
+    func Get() int {
+        return this.n
+    }
+}
+
+func bumpCopy(c Counter) {
+    c.Inc()                     // increments the parameter, which is a copy
+}
+
+func bump(c *Counter) {
+    c.Inc()
+}
+
+func main() {
+    var c = Counter.New("hits")
+    c.Inc()                     // called on a variable: Inc gets &c
+    bumpCopy(c)
+    println(c.Get())
+    bump(&c)
+    println(c.Get())
+
+    var inc = c.Inc             // a method value, bound to &c
+    inc()
+    inc()
+    println(c.name, c.Get())
+}

@@ -1,0 +1,106 @@
+This chapter covers the parts of Zell you use in every function: declaring variables and constants,
+the built-in types, and functions themselves, including several results, variadic parameters and
+closures. If you know Go, most of it will look familiar; the differences are called out as you go.
+
+## Variables
+
+`var` is the only way to declare a variable. The type comes from the initializer; when you write it,
+it goes after the name, as in Go. A variable without an initializer holds the zero value of its type:
+`0`, `0.0`, `false`, `""`, an empty slice, `nil` for pointers. A map declared without a value can be
+read but not written; [Slices, maps and strings](/docs/learn/collections) explains why.
+
+<Example id="learn/basics/variables" />
+
+Declarations can appear inside functions and at the top level of a file. A top-level `var` lives for the
+whole program; `const` declares a compile-time constant, at the top level or inside a function.
+
+A few rules keep code tidy:
+
+- A local variable that is declared and never used is a compile error. Rename it to `_` if you only need
+  the side effect of the initializer.
+- An import that is never used is a compile error too.
+- An inner block may declare a variable with the same name as an outer one; the inner one hides the outer
+  one until the block ends.
+- There is no `++` or `--`. Write `i += 1`; the compiler suggests the fix if you forget.
+
+<Callout type="go">
+There is no `:=`. Every declaration starts with `var`, and the short form `var x = 1` already infers the
+type. `var x int = 1` is the explicit form when the literal alone would pick the wrong type.
+</Callout>
+
+## Built-in types
+
+| Kind | Types |
+|---|---|
+| Integers | `int` (64-bit), `int8`, `int16`, `int32`, `int64`, `uint8` … `uint64`, `uint`, `byte` |
+| Floating point | `float` (64-bit), `float32` |
+| Other | `bool`, `string` (immutable UTF-8), `char` (a Unicode code point) |
+| Composite | `[]T` slice, `[N]T` array, `map[K]V`, `*T` pointer, `(A, B)` tuple |
+
+An integer literal is an `int`, a literal with a dot or an exponent is a `float`. Untyped constants
+adapt to the type they meet: in `var weight float = 2`, the `2` becomes a float. Values of different
+numeric types never mix implicitly; convert with the type name, as in `float(n)` or `int(x)`.
+
+<Example id="learn/basics/types" />
+
+Arithmetic follows Go: integer division truncates toward zero, `%` takes the sign of the left operand,
+and fixed-size integers wrap around on overflow instead of panicking. `int(x)` on a float drops the
+fraction. A constant that does not fit its type, such as `var a int8 = 200`, is a compile error.
+
+`char` is a 32-bit code point, like Go's `rune`. You can add an integer to it or subtract two of them
+(the difference is an `int`); other arithmetic needs `int(c)` first. `string(c)` turns it into a string.
+
+<Callout type="go">
+A `char` prints as the character, not as a number: `println('é')` writes `é` where Go's
+`fmt.Println('é')` writes `233`. Use `int(c)` to get the number.
+</Callout>
+
+Strings in double quotes understand escapes such as `\n`, `\t` and `\"`. Strings in backquotes are
+raw: no escapes, and they may span lines, which suits Windows paths, regular expressions and SQL.
+
+## Functions
+
+A parameter is written `name type`; neighbors of the same type can share it. The result type follows
+the closing parenthesis, with no colon, and is left out when the function returns nothing.
+
+<Example id="learn/basics/functions" />
+
+A function with several results returns a tuple. You can take it apart into new variables with
+`var q, r = …` (or `var (q, r) = …`), assign into existing ones with `q, r = …`, drop a part with `_`,
+or keep the tuple whole and read its elements as `pair.0`, `pair.1`. Assignment evaluates every value on
+the right before it stores any, so `a, b = b, a` swaps.
+
+A name that starts with a capital letter is exported from its namespace; a lowercase one is private to
+it. That applies to functions, types, constants and top-level variables alike.
+
+<Callout type="go">
+The result is a tuple, a value of its own: `var pair = divmod(7, 2)` is legal and `println(pair)`
+prints `(3 1)`. Results have no names, so there is no bare `return` of named results.
+</Callout>
+
+## Variadic functions
+
+A last parameter written `name ...T` accepts any number of arguments and sees them as a `[]T`.
+To pass an existing slice, spread it with `xs...`; the slice is passed as is, without a copy.
+
+<Example id="learn/basics/variadic" />
+
+`...` is allowed only on the final argument and only for a variadic parameter. Generic functions,
+lambdas and interface methods cannot be variadic.
+
+## Function values and closures
+
+Functions are values. Their type is written `func(int) int`, and a named function can be passed
+wherever that type is expected. A lambda has two forms: the block form `func(x int) int { … }` and the
+short form `(x int) => x * x`. When the expected type is known, as for an argument, the parameter types
+can be left out: `x => x + 10`.
+
+<Example id="learn/basics/closures" />
+
+A closure captures the variables it uses, not copies of them: the counter keeps its own `n` between
+calls, and each call of `counter()` creates a fresh one. Captured variables are kept alive by reference
+counting, so the closure can outlive the function that created it.
+
+## Next
+
+[Control flow](/docs/learn/control-flow): `if`, the forms of `for`, `switch`, labels and `defer`.

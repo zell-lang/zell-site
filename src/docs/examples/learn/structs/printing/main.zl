@@ -1,0 +1,35 @@
+namespace versions
+
+import io
+
+struct Version {
+    Major int
+    Minor int
+    Patch int
+
+    func String() string {
+        return fmt.Format("v{0}.{1}.{2}", this.Major, this.Minor, this.Patch)
+    }
+
+    func Equals(o Version) bool {
+        return this.Major == o.Major && this.Minor == o.Minor && this.Patch == o.Patch
+    }
+
+    func Compare(o Version) int {
+        if this.Major != o.Major {
+            return this.Major - o.Major
+        }
+        if this.Minor != o.Minor {
+            return this.Minor - o.Minor
+        }
+        return this.Patch - o.Patch
+    }
+}
+
+func main() {
+    var a = Version{Major: 1, Minor: 4, Patch: 2}
+    var b = Version{Major: 1, Minor: 10}
+    println(a, b)               // println uses String()
+    println(a == b, a != b, a < b)
+    println([b, a])
+}

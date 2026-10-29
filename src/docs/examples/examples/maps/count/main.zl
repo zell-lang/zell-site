@@ -1,0 +1,23 @@
+namespace count
+
+import io
+
+func main() {
+    var text = "the cat and the dog and the bird"
+
+    var counts = map[string]int{}
+    for w in strings.Fields(text) {
+        counts[w] += 1
+    }
+
+    for w in maps.SortedKeys(counts) {
+        println(w, counts[w])
+    }
+
+    // Count letters, with char keys.
+    var letters = map[char]int{}
+    for ch in "mississippi" {
+        letters[ch] += 1
+    }
+    println(letters['s'], letters['i'], letters['p'], letters['z'])
+}

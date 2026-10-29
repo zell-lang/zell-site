@@ -1,0 +1,46 @@
+`encoding.json` converts between JSON text and your own types. `json.Format` and `json.Parse<T>` are
+generated at compile time from the type's fields, so there are no tags to parse at run time, and
+`json.ParseValue` reads JSON of unknown shape. Every program here starts with `import encoding`.
+For a task-oriented walk-through see [Work with JSON](/docs/guides/json).
+
+## Encoding
+
+<Example id="examples/json/format" />
+
+## Decoding into a struct
+
+`Parse<T>` returns `T!`. Keys are matched to field names exactly, including case.
+
+<Example id="examples/json/parse" />
+
+## Field attributes
+
+`@json(name: …)` renames a field, `omitEmpty` leaves out zero values, `skip` excludes the field both
+ways. Attributes are checked by the compiler: a misspelled option does not compile.
+
+<Example id="examples/json/attributes" />
+
+## Nested values, pointers and maps
+
+<Example id="examples/json/nested" />
+
+## Decoding errors
+
+An error from `Parse<T>` names the path of the value that did not fit.
+
+<Example id="examples/json/errors" />
+
+## Enums
+
+<Example id="examples/json/enums" />
+
+## Dynamic values
+
+`json.Value` is a node of a parsed document. Its accessors (`String`, `Int`, `Float`, `Bool`) return
+`T!`, because the value may be of another kind.
+
+<Example id="examples/json/dynamic" />
+
+## Next
+
+[Time](/docs/examples/time): durations, dates and formatting.

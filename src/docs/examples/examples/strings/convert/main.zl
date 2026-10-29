@@ -1,0 +1,26 @@
+namespace convert
+
+import io
+
+func main() {
+    // Parsing returns int! / float!: handle the error or give a default.
+    var n = try strings.ToInt("42") else 0
+    var bad = try strings.ToInt("4x2") else -1
+    println(n + 1, bad)
+
+    try strings.ToFloat("2.5e") catch err {
+        println("error:", err)
+    }
+    var f = try strings.ToFloat("2.5") else 0.0
+    println(f * 2.0)
+
+    // strconv covers bases and quoting.
+    println(strconv.Itoa(255) + "!", strconv.FormatInt(255, 16), strconv.FormatInt(5, 2))
+    var hex = try strconv.ParseInt("ff", 16) else 0
+    println(hex)
+    println(strconv.Quote("say \"hi\"\n"))
+
+    // fmt.Format turns any value into text.
+    var text = fmt.Format("{0}", 3.75)
+    println(text, len(text))
+}

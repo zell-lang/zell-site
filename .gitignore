@@ -5,3 +5,4 @@ public/api/config.php
 .env.deploy
 target/
 src/docs/examples/**/zell.lock
+.deploy-cache.json

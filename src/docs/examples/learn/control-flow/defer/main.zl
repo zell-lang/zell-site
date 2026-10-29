@@ -1,0 +1,29 @@
+namespace transfer
+
+import io
+
+func step(name string) {
+    println("  undo", name)
+}
+
+func run(fail bool) int {
+    println("run, fail =", fail)
+    defer step("open")
+    defer step("lock")
+
+    var attempts = 1
+    defer println("  attempts at defer:", attempts)    // evaluated now
+    defer func() { println("  attempts at exit:", attempts) }()
+
+    attempts += 1
+    if fail {
+        return -1     // defers run on this path too
+    }
+    println("  done")
+    return 0
+}
+
+func main() {
+    println(run(false))
+    println(run(true))
+}

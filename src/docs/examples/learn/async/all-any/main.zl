@@ -1,0 +1,24 @@
+namespace prices
+
+import io
+
+async func quote(shop string, ms int) int {
+    await task.Delay(ms)
+    return len(shop) * 10
+}
+
+async func main() {
+    // A fixed number of tasks: one result per task, in argument order.
+    var (north, southwest) = await task.All(quote("north", 5), quote("southwest", 1))
+    println(north, southwest)
+
+    // A number known at run time: a slice of tasks.
+    var ts []Task<int> = []
+    for shop in ["east", "west", "center"] {
+        ts = append(ts, quote(shop, 1))
+    }
+    println(await task.All(ts))
+
+    // The first task to finish wins; the other one is cancelled.
+    println(await task.Any(quote("cache", 1), quote("origin", 60000)))
+}

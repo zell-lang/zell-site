@@ -1,0 +1,10 @@
+open src.txt
+open dst.txt
+copy src.txt to dst.txt
+close dst.txt
+close src.txt
+open src.txt
+open dst.txt
+close dst.txt
+close src.txt
+error: disk full

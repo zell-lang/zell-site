@@ -1,0 +1,33 @@
+namespace sorting
+
+import io
+
+struct Player {
+    Name  string
+    Score int
+}
+
+func main() {
+    var xs = [5, 2, 9, 1]
+    slices.Sort(xs)
+    println(xs, slices.IsSorted(xs))
+
+    var words = ["pear", "fig", "banana"]
+    slices.Sort(words)
+    println(words)
+
+    var players = [Player{Name: "ann", Score: 7}, Player{Name: "bob", Score: 9}, Player{Name: "cy", Score: 7}]
+
+    // SortBy sorts by a key; the sort is stable, so equal keys keep their order.
+    slices.SortBy(players, (p Player) => p.Score)
+    for p in players {
+        println(p.Name, p.Score)
+    }
+
+    // SortFunc takes a "less" function: here by score, descending.
+    slices.SortFunc(players, (a Player, b Player) => a.Score > b.Score)
+    println(players[0].Name)
+
+    slices.Reverse(xs)
+    println(xs)
+}

@@ -1,0 +1,23 @@
+namespace lookup
+
+import io
+
+func main() {
+    var stock = map[string]int{"apple": 3, "pear": 0}
+
+    // comma-ok: ok tells "stored zero" from "absent".
+    for name in ["apple", "pear", "plum"] {
+        var n, ok = stock[name]
+        if ok {
+            println(name, "in stock:", n)
+        } else {
+            println(name, "unknown")
+        }
+    }
+
+    // The assign form updates existing variables.
+    var n = -1
+    var ok = true
+    n, ok = stock["plum"]
+    println(n, ok)
+}

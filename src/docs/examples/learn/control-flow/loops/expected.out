@@ -1,0 +1,11 @@
+i = 0
+i = 1
+i = 2
+go 2
+zell 4
+rust 4
+0 go
+2 rust
+in stock: 10
+steps: 4
+x: 64

@@ -1,0 +1,23 @@
+namespace inventory
+
+import io
+
+const Warehouse = "north"   // a compile-time constant
+var restocks = 0            // a package-level variable
+
+func main() {
+    var count = 12           // int, inferred from the literal
+    var price = 4.5          // float
+    var label = "bolts"      // string
+    var weight float = 2     // explicit type: 2 becomes 2.0
+    var reserved int         // no initializer: the zero value, 0
+    var tags []string        // zero value: an empty slice
+
+    count -= 3
+    reserved += 1
+    restocks += 1
+    tags = append(tags, "metal")
+
+    println(label, count, price * float(count), weight)
+    println(reserved, tags, restocks, Warehouse)
+}

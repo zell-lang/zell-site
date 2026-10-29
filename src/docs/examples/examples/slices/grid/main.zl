@@ -1,0 +1,32 @@
+namespace grid
+
+import io
+
+func main() {
+    // A slice of slices; rows may differ in length.
+    var grid = [[1, 2, 3], [4, 5, 6]]
+    grid[1][2] = 60
+    println(grid, len(grid), len(grid[0]))
+
+    var total = 0
+    for row in grid {
+        for v in row {
+            total += v
+        }
+    }
+    println("total:", total)
+
+    // Build a 3x3 identity matrix row by row.
+    var id [][]int
+    for r in 0..3 {
+        var row = slices.Of(0, 3)
+        row[r] = 1
+        id = append(id, row)
+    }
+    println(id)
+
+    // A fixed-size array: length is part of the type, elements start at zero.
+    var counts [3]int
+    counts[0] = 7
+    println(len(counts), counts)
+}

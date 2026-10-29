@@ -1,0 +1,6 @@
+run backup
+finish backup attempt 1
+release lease backup
+finish broken attempt 1
+release lease broken
+error: cannot run broken

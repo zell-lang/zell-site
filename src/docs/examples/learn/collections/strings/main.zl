@@ -1,0 +1,26 @@
+namespace spelling
+
+import io
+
+func main() {
+    var s = "naïve"                 // ï takes two bytes in UTF-8
+    println(len(s), len(strings.Runes(s)))
+
+    // Indexing gives a byte; ranges are byte offsets.
+    println(s[0], s[0..2], s[4..])
+
+    // for walks code points; i is the byte offset of each one.
+    for i, ch in s {
+        println(i, ch, int(ch))
+    }
+
+    // Strings are immutable: build a new one.
+    var r = strings.Runes(s)
+    r[2] = 'i'
+    var plain = strings.FromRunes(r)
+    println(plain, s)
+
+    var greeting = "hello"
+    greeting += ", " + plain
+    println(greeting, greeting == "hello, naive", "apple" < "banana")
+}

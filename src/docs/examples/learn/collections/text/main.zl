@@ -1,0 +1,27 @@
+namespace csvline
+
+import io
+import strings
+
+func main() {
+    var line = "  id=7; name=Ada Lovelace ; lang=zell  "
+    var fields = Split(Trim(line), ";")
+    println(len(fields))
+
+    var b = Builder{}
+    for f in fields {
+        var kv = Split(Trim(f), "=")
+        b.Write(PadRight(ToUpper(kv[0]), 6, "."))
+        b.Write(kv[1])
+        b.Write("\n")
+    }
+    print(b.String())
+
+    var name = "Ada Lovelace"
+    println(Contains(name, "Love"), HasPrefix(name, "Ada"), Index(name, "L"))
+    println(Replace(name, "a", "4"), Fields(name), ToLower(name))
+    println(Join(["a", "b", "c"], "/"), Repeat("-", 5))
+
+    var id = try ToInt("42") else 0
+    println(fmt.Format("{0} is #{1}, {2,5}|", name, id, "ok"))
+}

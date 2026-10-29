@@ -1,0 +1,52 @@
+A slice `[]T` is a growable view of an array. Slices share their buffer on assignment, like in Go,
+and the generic helpers in `slices` cover sorting, searching and transforming. The rules are in
+[Collections](/docs/learn/collections).
+
+## Creating and appending
+
+`append` returns the new slice, which you assign back. `xs...` appends every element of another
+slice.
+
+<Example id="examples/slices/basics" />
+
+## Sub-slices and copies
+
+`xs[a..b]` is half-open and shares memory with `xs`. Use `slices.Clone` when you need a separate copy.
+
+<Example id="examples/slices/subslices" />
+
+<Callout type="go">
+Zell writes ranges as `xs[1..4]`, `xs[..2]`, `xs[4..]` instead of `xs[1:4]`. There are no built-in
+`make`, `copy` or `cap`: use a literal or `slices.Of(v, n)`, and `slices.Clone`.
+</Callout>
+
+## Sorting
+
+`slices.Sort` sorts numbers and strings. `SortBy` sorts by a key and `SortFunc` by a `less` function;
+both are stable.
+
+<Example id="examples/slices/sorting" />
+
+## Searching
+
+<Example id="examples/slices/search" />
+
+## Map, filter, reduce
+
+The helpers take lambdas and return new slices; the input is not changed.
+
+<Example id="examples/slices/transform" />
+
+## Inserting and deleting
+
+`Insert`, `Delete` and `DeleteFunc` return the resulting slice, like `append`.
+
+<Example id="examples/slices/edit" />
+
+## Nested slices and arrays
+
+<Example id="examples/slices/grid" />
+
+## Next
+
+[Maps](/docs/examples/maps): lookup with comma-ok, counting, grouping and stable iteration.

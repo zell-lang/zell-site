@@ -1,0 +1,24 @@
+namespace shipping
+
+import io
+
+func cost(weight int, express bool) int {
+    if weight <= 0 {
+        return 0
+    } else if weight < 10 && !express {
+        return 5
+    } else if weight < 10 {
+        return 12
+    }
+    return 5 + weight / 2
+}
+
+func main() {
+    println(cost(0, false), cost(3, false), cost(3, true), cost(30, false))
+
+    var stock = map[string]int{"bolts": 4}
+    var n, ok = stock["nuts"]
+    if !ok {
+        println("no nuts, got the zero value", n)
+    }
+}

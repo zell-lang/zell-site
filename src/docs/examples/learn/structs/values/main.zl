@@ -1,0 +1,31 @@
+namespace geometry
+
+import io
+
+struct Point {
+    X int
+    Y int
+}
+
+func main() {
+    var a = Point{X: 1, Y: 2}
+    var b = a                   // a copy
+    b.X = 10
+    println(a.X, b.X)
+
+    var p = &a                  // a pointer to a
+    p.X = 5                     // fields through a pointer: no -> and no (*p)
+    println(a.X)
+
+    var h = new Point{X: 3, Y: 4}   // *Point, allocated on the heap
+    var h2 = h                  // the same object
+    h2.Y = 0
+    println(h.Y)
+
+    var pts = [Point{X: 1, Y: 1}, Point{X: 2, Y: 2}]
+    for pt in pts {
+        println(pt.X + pt.Y)    // pt is a copy of the element
+    }
+    pts[0].X = 100              // an element is changed in place
+    println(pts[0].X, pts[1].X)
+}

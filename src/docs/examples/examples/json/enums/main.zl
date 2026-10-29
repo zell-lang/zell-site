@@ -1,0 +1,26 @@
+namespace enums
+
+import encoding
+import io
+
+enum Level { Debug, Info, Warn, Error }
+
+struct Rule {
+    Pattern string
+    Level   Level
+}
+
+func main() void! {
+    // Plain enums are written and read by variant name.
+    var r = Rule{Pattern: "db.*", Level: Level.Warn}
+    println(json.Format(r))
+
+    var rules = json.Parse<[]Rule>(`[{"Pattern": "*", "Level": "Info"}, {"Pattern": "auth", "Level": "Debug"}]`)?
+    for x in rules {
+        println(x.Pattern, x.Level)
+    }
+
+    try json.Parse<Rule>(`{"Level": "Fatal"}`) catch err {
+        println("error:", err)
+    }
+}

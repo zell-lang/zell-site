@@ -1,0 +1,24 @@
+namespace attributes
+
+import encoding
+import io
+
+struct User {
+    @json(name: "id") Id int
+    @json(name: "full_name") Name string
+    @json(omitEmpty: true) Email string
+    @json(skip: true) Password string
+}
+
+func main() void! {
+    var ann = User{Id: 1, Name: "Ann Lee", Email: "ann@example.com", Password: "secret"}
+    println(json.Format(ann))
+
+    // omitEmpty drops a zero value; skip never writes the field.
+    var bob = User{Id: 2, Name: "Bob", Password: "hunter2"}
+    println(json.Format(bob))
+
+    // Parsing uses the same names; a skipped field is never read.
+    var u = json.Parse<User>(`{"id": 3, "full_name": "Cy", "Password": "x"}`)?
+    println(u.Id, u.Name, u.Password == "")
+}

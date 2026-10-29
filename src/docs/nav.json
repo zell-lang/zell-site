@@ -33,37 +33,37 @@
         {
           "slug": "basics",
           "title": "Variables, types and functions",
-          "status": "planned",
+          "status": "draft",
           "summary": "var and const, inference, the built-in types, functions with several results, variadics, closures."
         },
         {
           "slug": "control-flow",
           "title": "Control flow",
-          "status": "planned",
+          "status": "draft",
           "summary": "if, for over ranges, slices and maps, switch, labels, defer."
         },
         {
           "slug": "collections",
           "title": "Slices, maps and strings",
-          "status": "planned",
+          "status": "draft",
           "summary": "Growing slices, slicing, maps with comma-ok lookup, strings as UTF-8 and the strings namespace."
         },
         {
           "slug": "structs",
           "title": "Structs and methods",
-          "status": "planned",
-          "summary": "Fields, methods declared inside the struct, value and pointer receivers, embedding."
+          "status": "draft",
+          "summary": "Fields and defaults, methods declared inside the struct (receivers are always pointers), embedding."
         },
         {
           "slug": "interfaces",
           "title": "Interfaces",
-          "status": "planned",
+          "status": "draft",
           "summary": "Implicit implementation, type switches, the any type and what a call through an interface costs."
         },
         {
           "slug": "enums",
           "title": "Enums and pattern matching",
-          "status": "planned",
+          "status": "draft",
           "summary": "Enums with data, exhaustive switch, binding variant fields."
         },
         {
@@ -81,13 +81,13 @@
         {
           "slug": "memory",
           "title": "Memory and resources",
-          "status": "planned",
+          "status": "draft",
           "summary": "Reference counting with compile-time ownership, Drop, weak references and cycles."
         },
         {
           "slug": "async",
           "title": "Async and tasks",
-          "status": "planned",
+          "status": "draft",
           "summary": "async and await, tasks, channels, mutexes, cancellation and timeouts."
         },
         {
@@ -118,20 +118,20 @@
         {
           "slug": "strings",
           "title": "Strings",
-          "status": "planned",
+          "status": "draft",
           "summary": "Concatenation, formatting, splitting, searching, runes and UTF-8."
         },
         {
           "slug": "slices",
           "title": "Slices",
-          "status": "planned",
+          "status": "draft",
           "summary": "Creating, appending, slicing, copying, sorting and iterating."
         },
         {
           "slug": "maps",
           "title": "Maps",
-          "status": "planned",
-          "summary": "Inserting, lookup with comma-ok, deleting, iterating in a stable order."
+          "status": "draft",
+          "summary": "Inserting, lookup with comma-ok, deleting, iterating over sorted keys, sets."
         },
         {
           "slug": "structs",
@@ -178,7 +178,7 @@
         {
           "slug": "json",
           "title": "JSON",
-          "status": "planned",
+          "status": "draft",
           "summary": "Encoding and decoding structs, attributes, dynamic values."
         },
         {

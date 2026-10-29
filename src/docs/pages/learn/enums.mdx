@@ -1,0 +1,88 @@
+An enum is a type with a fixed list of variants. A variant can be a plain name, like a constant, or carry
+fields of its own, like a small struct. A `switch` takes an enum apart: it picks the variant and binds its
+fields to names in one step. Enums with data replace the "tagged struct plus a kind field" pattern and
+many small class hierarchies.
+
+## Plain enums
+
+The simplest enum lists names. Values are written `Weekday.Wed`; they print as the variant name and
+compare with `==`. `int(d)` gives the variant's position, starting at 0.
+
+<Example id="learn/enums/plain" />
+
+The zero value of a plain enum is its first variant. Plain enums can be map keys. They have no order:
+`d < Weekday.Fri` does not compile unless the enum declares a `Compare` method (see
+[printing and comparing](/docs/learn/structs#printing-and-comparing) for structs; it works the same
+way), so compare the ordinals when that is what you mean.
+
+<Callout type="go">
+Go builds enums from `const` and `iota`: the type is an integer, any integer converts to it, and it
+prints as a number. A Zell enum is a closed type. A `Weekday` holds one of its seven variants and nothing
+else, and `println` shows `Wed`, not `2`.
+</Callout>
+
+## Variants with data
+
+A variant declares its fields like function parameters, and you create it like a function call:
+`Command.Copy("a.txt", "b.txt", true)`. Plain and data variants can be mixed in one enum.
+
+`case Command.Copy(f, t, _):` matches the variant and binds its fields by position. The pattern lists
+every field of the variant; `_` skips one you do not need. A plain variant in the same switch is written
+without parentheses.
+
+<Example id="learn/enums/data" />
+
+An enum with data has no built-in `==`, since its fields might not be comparable; match it with a
+`switch`, or declare `Equals`. To print one, give it a `String()` method (below).
+
+## Exhaustive switches
+
+`run` above has no `return` after its `switch`. A `switch` without `default` that lists every variant
+of an enum is a terminating statement, like a `return`: the compiler knows one of the cases runs. Delete
+`case Command.Pwd` and `run` stops compiling:
+
+```text
+error: missing return at end of function run returning string
+```
+
+So when a function's result comes from a `switch` over an enum, adding a variant later turns every
+such function that misses it into a compile error. A switch used as a statement may leave variants out;
+it does nothing for them. And a `default` case is a deliberate choice to accept future variants
+silently, so leave it out where you want the compiler's help.
+
+<Callout type="note">
+Exhaustiveness is checked through the `return` rule: a statement `switch` over an enum that misses a
+variant compiles without a warning. A [sealed interface](/docs/learn/interfaces#sealed-interfaces) gives
+the stricter check, `switch ... is not exhaustive: missing ...`, for every type switch over it.
+</Callout>
+
+## Methods on enums
+
+An enum can declare methods after its variants. Inside them `this` is the enum value itself, a copy
+rather than a pointer, so a method cannot change the variant it was called on: return a new value
+instead. Enums have no static methods. With a `String()` method, `println` prints the enum through it.
+
+An enum with methods implements interfaces like a struct does, and `implements` works the same way.
+
+<Example id="learn/enums/methods" />
+
+`Label` switches on `this` and covers every variant, so it needs no `return` at the end.
+
+## Enums or interfaces
+
+Both describe a value that is one of several kinds. Choose by which side grows:
+
+- An **enum** fits a closed set of variants that are mostly data: commands, tokens, states, results.
+  Adding an operation is one new function with a `switch`; adding a variant shows you every function
+  that has to handle it.
+- An **interface** fits an open set of types that share behaviour, where other namespaces, or other
+  packages, add implementations. Adding a type touches no existing code. A `sealed` interface sits in
+  between: a closed set of full structs, each with its own methods.
+
+Enums can be generic too: `enum Option<T> { Some(value T), None }` is covered with the other
+[generics](/docs/learn/generics).
+
+## Next
+
+[Generics](/docs/learn/generics): type parameters for functions, structs and enums, and the constraints
+that say what a type parameter can do.

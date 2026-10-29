@@ -1,0 +1,25 @@
+namespace subslices
+
+import io
+
+func main() {
+    var xs = [0, 1, 2, 3, 4, 5]
+
+    // Ranges are half-open: xs[1..4] holds indexes 1, 2, 3.
+    println(xs[1..4], xs[..2], xs[4..])
+
+    // A sub-slice shares the buffer with the original.
+    var mid = xs[1..4]
+    mid[0] = 100
+    println(xs)
+
+    // slices.Clone makes an independent copy.
+    var dup = slices.Clone(xs)
+    dup[0] = -1
+    println(xs[0], dup[0])
+
+    // Assigning a slice copies the reference, not the elements.
+    var alias = xs
+    alias[5] = 50
+    println(xs)
+}

@@ -1,0 +1,47 @@
+namespace logging
+
+import io
+
+interface Sink {
+    func Write(level string, msg string)
+
+    // Default methods: written in terms of Write.
+    func Info(msg string) { this.Write("INFO", msg) }
+    func Error(msg string) { this.Write("ERROR", msg) }
+}
+
+interface Flusher {
+    func Flush() int
+}
+
+interface BufferedSink {
+    Sink                        // embeds Sink's methods, defaults included
+    Flusher
+}
+
+struct Console {
+    func Write(level string, msg string) { println(level, msg) }
+    func Error(msg string) { println("!!", msg) }    // overrides the default
+}
+
+struct Buffer {
+    lines []string
+    func Write(level string, msg string) { this.lines = append(this.lines, level + " " + msg) }
+    func Flush() int {
+        for l in this.lines {
+            println("flushed:", l)
+        }
+        return len(this.lines)
+    }
+}
+
+func main() {
+    var c = Console{}
+    c.Info("started")           // a default method, called on the struct
+    var s Sink = c
+    s.Error("disk full")        // Console's own Error, also through Sink
+    var b BufferedSink = new Buffer{}
+    b.Info("one")
+    b.Info("two")
+    println(b.Flush(), "lines")
+}

@@ -1,0 +1,7 @@
+{"Name":"tri","Points":[{"X":0,"Y":0},{"X":4,"Y":0},{"X":0,"Y":3}],"Closed":true}
+{
+  "X": 1,
+  "Y": 2
+}
+[1.5,2] "a \"quoted\" line\n" true
+{"a":1,"b":2,"c":3}

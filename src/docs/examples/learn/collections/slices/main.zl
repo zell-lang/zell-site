@@ -1,0 +1,32 @@
+namespace queue
+
+import io
+
+func main() {
+    var jobs = ["build", "test"]          // []string
+    jobs = append(jobs, "lint")
+    jobs = append(jobs, "pack", "ship")    // several at once
+    println(jobs, len(jobs))
+
+    jobs[0] = "compile"
+    println(jobs[0], jobs[len(jobs) - 1])
+
+    var later = ["docs", "bench"]
+    jobs = append(jobs, later...)         // all elements of another slice
+    println(len(jobs))
+
+    var done []string                      // empty; append allocates
+    for job in jobs {
+        if len(job) == 4 {
+            done = append(done, job)
+        }
+    }
+    println(done)
+
+    var grid = [[1, 2], [3, 4]]            // [][]int
+    grid[1][0] = 30
+    println(grid)
+
+    var ids []int = []                     // an empty literal needs the type
+    println(len(ids), slices.Contains(jobs, "test"))
+}

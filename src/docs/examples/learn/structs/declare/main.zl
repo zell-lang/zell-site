@@ -1,0 +1,30 @@
+namespace config
+
+import io
+
+struct Limits {
+    MaxConns int
+    TimeoutMs int
+}
+
+struct Config {
+    Host string = "localhost"   // a default: a constant
+    Port int = 8080
+    Debug bool                  // no default: the zero value, false
+    Limits Limits
+}
+
+func main() {
+    var a Config                            // no initializer: defaults apply
+    println(a.Host, a.Port, a.Debug, a.Limits.MaxConns)
+
+    var b = Config{Port: 9000, Debug: true} // omitted fields get defaults
+    println(b.Host, b.Port, b.Debug)
+
+    var c = Config{
+        Host: "example.com",
+        Limits: Limits{MaxConns: 10},       // a nested literal
+    }
+    c.Limits.TimeoutMs = 250
+    println(c.Host, c.Port, c.Limits.MaxConns, c.Limits.TimeoutMs)
+}

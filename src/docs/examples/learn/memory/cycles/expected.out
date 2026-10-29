@@ -1,0 +1,4 @@
+after pair
+drop session 2
+drop session 1
+collected: 2

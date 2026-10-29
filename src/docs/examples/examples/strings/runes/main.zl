@@ -1,0 +1,24 @@
+namespace runes
+
+import io
+
+func main() {
+    var s = "héllo, 世界"
+
+    // len counts bytes of UTF-8; Runes splits into code points (char).
+    println("bytes:", len(s), "chars:", len(strings.Runes(s)))
+
+    // s[i] is a byte; a range s[a..b] is a substring by byte offsets.
+    println(s[0], s[0..6])
+
+    // for over a string yields the byte offset and the char.
+    for i, ch in "añ€" {
+        println(i, ch, int(ch))
+    }
+
+    // Build a string from chars.
+    var rs = strings.Runes("zell")
+    rs[0] = 'Z'
+    println(strings.FromRunes(rs), string('!') + "?")
+    println(strings.Reverse(s))
+}

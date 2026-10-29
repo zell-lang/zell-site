@@ -1,0 +1,56 @@
+namespace events
+
+import io
+
+interface Event {
+    func Name() string
+}
+
+interface Timed {
+    func Millis() int
+}
+
+struct Click {
+    X int
+    Y int
+    func Name() string { return "click" }
+}
+
+struct Load {
+    Url string
+    Ms int
+    func Name() string { return "load" }
+    func Millis() int { return this.Ms }
+}
+
+struct Scroll {
+    func Name() string { return "scroll" }
+}
+
+func describe(e Event) string {
+    switch e {
+        case Click c: return fmt.Format("click at {0},{1}", c.X, c.Y)
+        case Timed t: return fmt.Format("{0} took {1} ms", e.Name(), t.Millis())
+        default:      return e.Name()
+    }
+}
+
+func kind(x any) string {
+    switch x {
+        case int n:    return "int " + strconv.Itoa(n * 2)
+        case string s: return "string of " + strconv.Itoa(len(s)) + " bytes"
+        case *Click c: return "pointer to a click at x=" + strconv.Itoa(c.X)
+        default:       return "something else"
+    }
+}
+
+func main() {
+    var events []Event = [Click{X: 3, Y: 4}, Load{Url: "/", Ms: 120}, Scroll{}]
+    for e in events {
+        println(describe(e))
+    }
+    var values []any = [21, "héllo", new Click{X: 7}, 2.5]
+    for v in values {
+        println(kind(v))
+    }
+}

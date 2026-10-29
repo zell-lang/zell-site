@@ -1,0 +1,22 @@
+namespace startup
+
+import io
+
+async func loadUsers() string! {
+    await task.Delay(60000)         // wakes at once when the task is cancelled
+    task.CheckCancelled()?
+    return "users"
+}
+
+async func loadConfig() string! {
+    await task.Delay(5)
+    return error("config: file not found")
+}
+
+async func main() {
+    var (users, config) = try await task.All(loadUsers(), loadConfig()) catch err {
+        println("startup failed:", err)
+        return
+    }
+    println(users, config)
+}

@@ -1,0 +1,33 @@
+namespace words
+
+import io
+
+func main() {
+    var counts = map[string]int{}
+    for w in strings.Fields("the cat and the hat and the bat") {
+        counts[w] += 1                 // a missing key starts at 0
+    }
+    println(len(counts), counts["the"], counts["dog"])
+
+    // Comma-ok tells a stored zero from a missing key.
+    counts["dog"] = 0
+    var n, ok = counts["dog"]
+    println(n, ok)
+    n, ok = counts["cow"]
+    println(n, ok)
+
+    delete(counts, "dog")
+    delete(counts, "cow")              // deleting a missing key is a no-op
+
+    // Iteration order is unspecified: sort the keys for stable output.
+    for w in maps.SortedKeys(counts) {
+        println(w, counts[w])
+    }
+
+    // Maps are references: both names see the same entries.
+    var alias = counts
+    alias["owl"] = 1
+    var copy = maps.Clone(counts)
+    copy["emu"] = 1
+    println(counts["owl"], counts["emu"], len(copy))
+}

@@ -3,7 +3,8 @@
 //   node scripts/deploy.mjs upload   upload dist/, remove stale hashed assets, write api/config.php once
 // Files on the server that the build does not produce are left alone, except old files in assets/.
 import { Client } from "basic-ftp";
-import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, posix, relative, sep } from "node:path";
 import { Readable } from "node:stream";
 import { fileURLToPath } from "node:url";
@@ -11,6 +12,8 @@ import { fileURLToPath } from "node:url";
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const DIST = process.env.DIST || join(ROOT, "dist");  // scripts/publish.mjs builds elsewhere
 const ENV_FILE = join(ROOT, ".env.deploy");
+// Hashes of the files as last uploaded: unchanged files are skipped (`--all` uploads everything).
+const CACHE_FILE = join(ROOT, ".deploy-cache.json");
 
 function readEnv() {
   if (!existsSync(ENV_FILE)) throw new Error(".env.deploy not found");
@@ -101,8 +104,14 @@ async function upload(env) {
   try {
     const base = env.FTP_DIR;
     if (!withApi && await removeDirIfAny(client, posix.join(base, "api"))) console.log("  removed api/ (DEPLOY_API=false)");
+    const all = process.argv.includes("--all");
+    const cache = !all && existsSync(CACHE_FILE) ? JSON.parse(readFileSync(CACHE_FILE, "utf8")) : {};
+    const saveCache = () => writeFileSync(CACHE_FILE, JSON.stringify(cache, null, 1));
+    let skipped = 0;
     // Shared hosts drop long FTP sessions now and then: reconnect and retry the file.
     for (const f of files) {
+      const hash = createHash("sha1").update(readFileSync(join(DIST, f))).digest("hex");
+      if (cache[f] === hash) { skipped++; continue; }
       for (let attempt = 1; ; attempt++) {
         try {
           await client.ensureDir(posix.join(base, posix.dirname(f)));
@@ -116,8 +125,12 @@ async function upload(env) {
           client = await connect(env);
         }
       }
+      cache[f] = hash;
+      if (Object.keys(cache).length % 25 === 0) saveCache();
       console.log(`  put ${f}`);
     }
+    saveCache();
+    if (skipped) console.log(`  ${skipped} unchanged files skipped`);
 
     // Vite names assets by content hash: the previous build's files are no longer referenced.
     const keep = new Set(files.filter(f => f.startsWith("assets/")).map(f => f.slice(7)));

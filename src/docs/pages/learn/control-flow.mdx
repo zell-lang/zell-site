@@ -1,0 +1,110 @@
+Zell has three control structures: `if`, `for` and `switch`, plus `defer` for work that must happen when a
+function returns. Conditions take no parentheses and bodies always take braces, as in Go. There is no
+`while`, no C-style three-part `for` and no ternary operator.
+
+## if
+
+`if` takes a `bool` expression, and `else if` chains read top to bottom. A function that returns a value
+must end in a terminating statement: either a final `return`, or an `if` whose every branch, including a
+final `else`, returns.
+
+<Example id="learn/control-flow/if" />
+
+<Callout type="go">
+`if` has no init statement: `if v, ok := m[k]; ok { … }` becomes a `var v, ok = m[k]` line followed by
+`if ok { … }`. The variables then stay in scope after the `if`.
+</Callout>
+
+## for
+
+One keyword covers every loop:
+
+| Form | Runs |
+|---|---|
+| `for i in 0..n { }` | for `i` from `0` up to `n - 1` |
+| `for x in xs { }` | for every element of a slice, array or string |
+| `for i, x in xs { }` | the same, with the index |
+| `for k, v in m { }` | for every entry of a map; `for k in m` gives the keys |
+| `for cond { }` | while `cond` is true |
+| `for { }` | until `break` or `return` |
+
+`a..b` is half-open: it includes `a` and excludes `b`, and it is empty when `b <= a`. The bounds can be any
+`int` expressions; they are evaluated once, before the first iteration. `break` leaves the loop and
+`continue` starts the next iteration.
+
+<Example id="learn/control-flow/loops" />
+
+A loop over a string visits code points, not bytes; [strings](/docs/learn/collections#strings) shows the
+details. A loop over a map visits its entries in no particular order, so the example only sums them. Use
+`_` for a loop variable you do not need.
+
+<Callout type="go">
+Loops use `in` instead of `:= range`, and `for i in 0..n` replaces `for i := 0; i < n; i++`. Each
+iteration gets its own copy of the loop variables, as in Go 1.22 and later.
+</Callout>
+
+`in` is a keyword only inside a `for` header, so `in` remains usable as a variable or parameter name.
+Your own types can be looped over too, by providing an `Iter()` or `Next()` method; the
+[structs](/docs/learn/structs) chapter shows how.
+
+## switch
+
+`switch` compares one value against a list of cases and runs the first that matches. A case can list
+several values, a half-open range `a..b`, or a condition such as `code >= 500`. Without a
+subject, `switch { … }` runs the first case whose condition is true, a tidy replacement for a long
+`else if` chain.
+
+<Example id="learn/control-flow/switch" />
+
+Cases never fall through, so no `case` ends with `break`. A `break` inside a case leaves the `switch`;
+`continue` inside a case continues the surrounding loop. When no case matches and there is no `default`,
+nothing happens.
+
+The same statement also matches on types and on enum variants with their data; those forms appear in
+[Interfaces](/docs/learn/interfaces) and [Enums and pattern matching](/docs/learn/enums).
+
+<Callout type="go">
+There is no `fallthrough` keyword. A case range `300..400` excludes `400`, the same half-open rule as in
+`for`. A condition case such as `case code >= 500:` can sit next to value cases in the same `switch`.
+</Callout>
+
+## Labels
+
+To leave or continue an outer loop from inside an inner one, put a label on the outer `for` (or on a
+`switch`) and name it in `break` or `continue`. The label goes on its own line, or on the same line,
+before the statement.
+
+<Example id="learn/control-flow/labels" />
+
+A label is visible in the whole function body. An unused label is a compile error, as is `continue` to a
+label on a `switch`. Leaving a block through a label releases its values and runs its cleanup exactly as a
+plain `break` does.
+
+## defer
+
+`defer` schedules a call to run when the function returns, on every path: the end of the body, an early
+`return`, or an error passed up with `?`. Deferred calls run in reverse order, last in first out.
+
+<Example id="learn/control-flow/defer" />
+
+The arguments of a deferred call are evaluated when the `defer` statement runs, so `attempts at defer`
+prints `1`. A deferred closure, `defer func() { … }()`, reads its variables when it runs, so it sees `2`.
+
+A deferred call cannot drop an error silently: deferring a function that returns `T!` is a compile error.
+Handle the error inside a deferred closure instead:
+
+```zell
+defer func() {
+    try file.Close() catch err { println("close failed:", err) }
+}()
+```
+
+<Callout type="warning">
+A `defer` inside a loop runs when the function exits, not at the end of each iteration, and the compiler
+says so with lint `L0008`. Move the loop body into its own function when each iteration needs its own
+cleanup.
+</Callout>
+
+## Next
+
+[Slices, maps and strings](/docs/learn/collections): the built-in collections and the `strings` namespace.

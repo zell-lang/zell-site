@@ -1,0 +1,44 @@
+namespace orders
+
+import io
+
+interface Labeled {
+    func Label() string
+}
+
+enum Status implements Labeled {
+    Pending
+    Shipped(tracking string)
+    Cancelled(reason string)
+
+    func Label() string {
+        switch this {           // this is the enum value itself, a copy
+            case Status.Pending:      return "pending"
+            case Status.Shipped(t):   return "shipped, tracking " + t
+            case Status.Cancelled(r): return "cancelled: " + r
+        }
+    }
+
+    func IsFinal() bool {
+        switch this {
+            case Status.Pending: return false
+            default:             return true
+        }
+    }
+
+    func String() string {
+        return "<" + this.Label() + ">"
+    }
+}
+
+func main() {
+    var s = Status.Pending
+    println(s, s.IsFinal())
+    s = Status.Shipped("1Z999")
+    println(s, s.IsFinal())
+
+    var items []Labeled = [Status.Cancelled("out of stock"), Status.Pending]
+    for it in items {
+        println(it.Label())
+    }
+}

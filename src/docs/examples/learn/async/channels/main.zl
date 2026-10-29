@@ -1,0 +1,24 @@
+namespace wordcount
+
+import io
+
+async func count(lines task.Channel<string>, counts task.Channel<int>) {
+    for line in lines {             // receives until lines is closed and empty
+        await counts.Send(len(strings.Fields(line)))
+    }
+    counts.Close()
+}
+
+async func main() {
+    var lines = task.Channel<string>(0)     // unbuffered: Send waits for Recv
+    var counts = task.Channel<int>(16)      // buffered: room for 16 values
+    var worker = count(lines, counts)
+    for line in ["one two", "three", "four five six"] {
+        await lines.Send(line)
+    }
+    lines.Close()
+    for n in counts {
+        println(n)
+    }
+    await worker
+}

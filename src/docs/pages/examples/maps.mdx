@@ -1,0 +1,47 @@
+A `map[K]V` is a hash table with reference semantics, like a Go map. Iteration order is unspecified, so
+every example that prints entries sorts the keys first with `maps.SortedKeys`. The rules are in
+[Collections](/docs/learn/collections).
+
+## Basics
+
+Index to read or write, `delete` to remove. Reading a missing key gives the zero value.
+
+<Example id="examples/maps/basics" />
+
+## Checking whether a key exists
+
+Two names on the left of `m[k]` make a comma-ok lookup: the second is `true` only when the key is
+present.
+
+<Example id="examples/maps/lookup" />
+
+## Iterating in a stable order
+
+<Example id="examples/maps/sorted" />
+
+## Counting
+
+`m[k] += 1` works on a missing key, because the read gives zero.
+
+<Example id="examples/maps/count" />
+
+## Grouping
+
+<Example id="examples/maps/group" />
+
+## Structs as values
+
+`m[k]` returns a copy of a struct value, so `m[k].Field = x` does not compile. Write the copy
+back, or store pointers.
+
+<Example id="examples/maps/structs" />
+
+## Sets
+
+The simplest set is a `map[T]bool`: a missing key reads as `false`.
+
+<Example id="examples/maps/sets" />
+
+## Next
+
+[Structs](/docs/examples/structs): fields, methods, constructors and embedding.

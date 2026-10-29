@@ -1,0 +1,4 @@
+{"Pattern":"db.*","Level":"Warn"}
+* Info
+auth Debug
+error: Level: unknown Level value "Fatal"

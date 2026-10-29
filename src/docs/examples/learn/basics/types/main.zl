@@ -1,0 +1,30 @@
+namespace types
+
+import io
+
+const Rows = 3
+const Ratio = 0.25
+
+func main() {
+    // Integers: int is 64-bit; sized types convert explicitly.
+    var total = 7
+    var small int8 = 100
+    var wide = int(small) + total
+    println(total / 2, total % 2, -total / 2, wide)
+
+    // Fixed-size types wrap around on overflow.
+    var b byte = 255
+    b += 1
+    println(b)
+
+    // Mixing int and float needs a conversion.
+    var avg = float(total) / 2
+    println(avg, int(avg), Rows * Ratio)
+
+    // char is a Unicode code point.
+    var c = 'é'
+    println(c, int(c), c + 1, 'z' - 'a', string(c) + "!")
+
+    // Raw strings keep backslashes and newlines as written.
+    println(`C:\temp\new`, true && !false)
+}

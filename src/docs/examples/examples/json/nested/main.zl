@@ -1,0 +1,34 @@
+namespace nested
+
+import encoding
+import io
+
+struct Address {
+    City string
+    Zip  string
+}
+
+struct Person {
+    Name   string
+    Home   *Address
+    Phones map[string]string
+}
+
+func main() void! {
+    var text = `[
+        {"Name": "ann", "Home": {"City": "Oslo", "Zip": "0150"}, "Phones": {"work": "555-01"}},
+        {"Name": "bob", "Home": null}
+    ]`
+    var people = json.Parse<[]Person>(text)?
+    for p in people {
+        // A pointer field is nil when the value is null or missing.
+        if p.Home == nil {
+            println(p.Name, "has no address")
+        } else {
+            println(p.Name, "lives in", p.Home.City, "work:", p.Phones["work"])
+        }
+    }
+
+    // nil pointers and maps are written as null.
+    println(json.Format(people[1]))
+}

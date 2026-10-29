@@ -1,0 +1,26 @@
+namespace meters
+
+import io
+
+interface Meter {
+    func Add(n int)
+    func Total() int
+}
+
+struct Sum {
+    n int
+    func Add(n int) { this.n += n }
+    func Total() int { return this.n }
+}
+
+func main() {
+    var s = Sum{}
+    var copied Meter = s        // the interface holds its own copy of s
+    var shared Meter = &s       // the interface holds a pointer to s
+    copied.Add(1)
+    shared.Add(10)
+    println(s.n, copied.Total(), shared.Total())
+
+    var none Meter              // the zero value is nil
+    println(none == nil, shared == nil)
+}

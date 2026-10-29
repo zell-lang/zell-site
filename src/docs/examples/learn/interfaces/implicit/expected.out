@@ -1,0 +1,6 @@
+mail to ops@example.com: disk full
+page 555-0100: disk full
+2 delivered
+mail to ops@example.com: disk full on db-1, db-2
+page 555-0100: disk full on db-1, db-2
+1 delivered

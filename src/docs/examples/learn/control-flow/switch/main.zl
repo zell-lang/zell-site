@@ -1,0 +1,38 @@
+namespace httpcodes
+
+import io
+
+func kind(code int) string {
+    switch code {
+        case 200, 204:   return "ok"
+        case 300..400:   return "redirect"   // 300 up to 399
+        case 404:        return "not found"
+        case code >= 500: return "server error"
+        default:         return "other"
+    }
+}
+
+func size(n int) string {
+    switch {                              // no subject: first true case
+        case n < 10:   return "small"
+        case n < 1000: return "medium"
+    }
+    return "large"
+}
+
+func main() {
+    for code in [200, 301, 400, 404, 503] {
+        println(code, kind(code))
+    }
+    println(size(3), size(300), size(3000))
+
+    for word in ["go", "zell", "rust"] {
+        switch word {
+            case "go":
+                println(word, "collects garbage")
+                // no fallthrough: the switch ends here
+            case "zell", "rust":
+                println(word, "frees memory without a collector")
+        }
+    }
+}

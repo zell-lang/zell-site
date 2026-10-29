@@ -1,0 +1,17 @@
+namespace downloads
+
+import io
+
+async func download(name string, ms int) string {
+    println("start", name)          // runs in the caller until the first suspension
+    await task.Delay(ms)
+    return name + ": done"
+}
+
+async func main() {
+    var a = download("a.zip", 20)   // both downloads are running now
+    var b = download("b.zip", 10)
+    println("waiting")
+    println(await a)
+    println(await b)
+}

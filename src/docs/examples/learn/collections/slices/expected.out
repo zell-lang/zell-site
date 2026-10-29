@@ -1,0 +1,6 @@
+[build test lint pack ship] 5
+compile ship
+7
+[test lint pack ship docs]
+[[1 2] [30 4]]
+0 true

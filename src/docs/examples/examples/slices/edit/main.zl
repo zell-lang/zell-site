@@ -1,0 +1,27 @@
+namespace edit
+
+import io
+
+func main() {
+    var xs = ["a", "b", "e"]
+
+    // Insert values before index 2.
+    xs = slices.Insert(xs, 2, ["c", "d"])
+    println(xs)
+
+    // Delete the range [1, 3).
+    xs = slices.Delete(xs, 1, 3)
+    println(xs)
+
+    // Remove every element that matches.
+    var nums = [1, 20, 3, 40, 5]
+    nums = slices.DeleteFunc(nums, (n int) => n > 10)
+    println(nums)
+
+    println(slices.Concat([1, 2], [3]), slices.Equal([1, 2], [1, 2]))
+
+    // A slice of n copies of a value.
+    var zeros = slices.Of(0, 4)
+    zeros[2] = 7
+    println(zeros)
+}

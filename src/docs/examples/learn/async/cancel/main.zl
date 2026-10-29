@@ -1,0 +1,26 @@
+namespace meter
+
+import io
+
+async func sum(readings task.Channel<int>) string {
+    var total = 0
+    for {
+        var v = try await readings.Recv() catch err {
+            return "stopped: " + err.Message() + ", total " + strconv.Itoa(total)
+        }
+        total += v
+    }
+}
+
+async func main() {
+    var readings = task.Channel<int>(0)
+    var stop = task.NewCancel()
+    var t = task.SpawnWith(stop.Context, func() Task<string> {
+        return sum(readings)
+    })
+    for v in [5, 10, 20] {
+        await readings.Send(v)      // returns once the reader has taken v
+    }
+    stop.Cancel()                   // the pending Recv fails with task.ErrCancelled
+    println(await t)
+}

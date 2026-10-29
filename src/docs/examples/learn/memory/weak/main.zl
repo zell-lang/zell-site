@@ -1,0 +1,23 @@
+namespace tree
+
+import io
+
+struct Node {
+    Name     string
+    Parent   weak *Node             // does not keep the parent alive
+    Children []*Node
+
+    func Drop() {
+        println("free", this.Name)
+    }
+}
+
+func main() {
+    var root = new Node{Name: "root"}
+    var leaf = new Node{Name: "leaf", Parent: root}
+    root.Children = append(root.Children, leaf)
+    println(leaf.Name, "is under", leaf.Parent.Name)
+
+    root = nil                      // the last strong reference to root
+    println("parent gone:", leaf.Parent == nil)
+}

@@ -1,0 +1,29 @@
+namespace calendar
+
+import io
+
+enum Weekday { Mon, Tue, Wed, Thu, Fri, Sat, Sun }
+
+func isWeekend(d Weekday) bool {
+    switch d {
+        case Weekday.Sat, Weekday.Sun: return true
+        default:                       return false
+    }
+}
+
+func main() {
+    var d = Weekday.Wed
+    println(d, int(d))                  // prints the variant name; int() is the ordinal
+    println(d == Weekday.Wed, int(d) < int(Weekday.Fri))   // == works, < needs int()
+
+    var zero Weekday                    // the zero value is the first variant
+    println(zero)
+
+    var hours = map[Weekday]int{}       // plain enums work as map keys
+    for day in [Weekday.Mon, Weekday.Sat, Weekday.Mon] {
+        if !isWeekend(day) {
+            hours[day] += 8
+        }
+    }
+    println(hours[Weekday.Mon], hours[Weekday.Sat])
+}

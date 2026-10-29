@@ -1,0 +1,126 @@
+Zell has two built-in collections, slices and maps, and an immutable UTF-8 `string`. All three behave
+like their Go counterparts, with shorter literals. The `slices`, `maps` and `strings` namespaces hold the
+algorithms that are functions rather than syntax.
+
+| Builtin | Does |
+|---|---|
+| `len(x)` | elements of a slice, array or map; bytes of a string |
+| `append(xs, v…)` | adds elements to a slice and returns the result |
+| `delete(m, k)` | removes a key from a map |
+
+## Slices
+
+A slice `[]T` is a view of a growable buffer. A literal is a bracketed list, and the element type comes
+from the values: `[1, 2]` is a `[]int`. When the expected type is known, as in `var ids []int = []`, the
+same brackets build that type; an empty `[]` with nothing to infer from is a compile error.
+
+<Example id="learn/collections/slices" />
+
+`append` returns the slice, which may now point to a new, larger buffer; always assign the result back.
+It takes one element, several elements, or the elements of another slice spread with `ys...`. Indexing
+outside `0..len(xs)` panics with `index out of range`.
+
+<Callout type="go">
+Literals have no type prefix: `["a", "b"]` instead of `[]string{"a", "b"}`, `[[1, 2], [3, 4]]` for a
+`[][]int`. There is no `make` and no `cap`: start from `[]` or a zero-value slice and `append`.
+</Callout>
+
+## Slicing and sharing
+
+`xs[a..b]` takes the elements from `a` up to `b - 1`, the same half-open range as in `for`. Either bound
+can be left out: `xs[..2]` is the first two, `xs[3..]` everything from index 3.
+
+<Example id="learn/collections/slicing" />
+
+A sub-slice shares the buffer of the original, so writing through one is visible through the other. The
+subtle case is `append` on a sub-slice: while the buffer has room, it writes into the shared memory and
+overwrites `nums[2]`, exactly as in Go. When you need an independent copy, take one with
+`slices.Clone`.
+
+An array `[N]T` has its length in its type. Arrays are values: assigning or passing one copies all the
+elements. A slice literal where an array is expected becomes an array literal, and it must have exactly
+`N` elements.
+
+The `slices` namespace has the usual algorithms, all generic: `Sort`, `SortBy`, `SortFunc`, `Contains`,
+`Index`, `Map`, `Filter`, `Reduce`, `Reverse`, `Clone`, `Insert`, `Delete`, `Equal`, `Min`, `Max`, `Sum`
+and more. `Sort` and `Reverse` work in place; `Map` and `Filter` return a new slice.
+
+## Maps
+
+A map `map[K]V` is a hash table. The literal lists `key: value` pairs in braces after the type, and
+`map[string]int{}` is an empty map ready for use. Reading a missing key returns the zero value of `V`,
+which makes counting a one-liner: `counts[w] += 1`.
+
+<Example id="learn/collections/maps" />
+
+To tell a key that holds the zero value from a key that is absent, ask for a second result: in
+`var n, ok = counts["dog"]`, `ok` is `true` only when the key is present. The same form assigns to
+existing variables, `n, ok = counts["cow"]`. Plain `m[k]` still gives just the value.
+
+The order of `for k, v in m` is unspecified; do not rely on it. When output must be stable,
+iterate over `maps.SortedKeys(m)`. Other helpers in `maps` include `Keys`, `Values`, `Clone`, `Merge`,
+`Filter` and `Equal`.
+
+A map is a reference: assigning it to another variable or passing it to a function shares the same
+entries, as `alias` shows. `maps.Clone` makes an independent copy.
+
+<Callout type="warning">
+A map variable declared without a value, `var m map[string]int`, is empty and readable, but writing to it
+panics with `assignment to entry in nil map`, as in Go. Initialize it with a literal first:
+`var m = map[string]int{}`.
+</Callout>
+
+<Callout type="go">
+There is no `in` operator for maps; comma-ok is the membership test. `println` refuses to print a map,
+at compile time: print its entries, as the example does with sorted keys.
+</Callout>
+
+## Strings
+
+A string is an immutable sequence of UTF-8 bytes. `len(s)` counts bytes, `s[i]` is the byte at offset
+`i`, and `s[a..b]` is a substring between byte offsets. `for i, ch in s` walks code points instead:
+`ch` is a `char` and `i` is the byte offset where it starts.
+
+<Example id="learn/collections/strings" />
+
+In `"naïve"`, the `ï` takes two bytes, so the string has six bytes and five code points, and `s[0..2]`
+is `na`. Slicing through the middle of a multi-byte character produces invalid UTF-8, so take byte offsets
+from `strings.Index` or from a `for` loop rather than computing them. To edit text by character, convert
+it to a `[]char` with `strings.Runes` and back with `strings.FromRunes`.
+
+`+` and `+=` concatenate, `==` compares contents, and `<` compares bytewise.
+
+## The strings namespace
+
+`strings` holds the text functions. Import it to call them by their short names, or write
+`strings.Split` without an import.
+
+<Example id="learn/collections/text" />
+
+| Function | Does |
+|---|---|
+| `Split(s, sep)`, `Join(parts, sep)`, `Fields(s)` | split on a separator, join with one, split on whitespace |
+| `Trim(s)` | removes leading and trailing whitespace (Go's `TrimSpace`) |
+| `Contains`, `HasPrefix`, `HasSuffix`, `Index`, `LastIndex`, `Count` | search; offsets are in bytes, `-1` when absent |
+| `Replace(s, old, new)` | replaces every occurrence |
+| `ToUpper`, `ToLower`, `Repeat`, `PadLeft`, `PadRight` | build new strings |
+| `ToInt(s)`, `ToFloat(s)` | parse a number; they return `int!` and `float!` |
+| `Builder{}` | accumulates pieces with `Write`, returns them with `String()` |
+
+`strings.ToInt` can fail, so its result has to be handled, here with `try … else`; the
+[Errors](/docs/learn/errors) chapter explains the forms. `fmt.Format` fills `{0}`, `{1}` … with its
+arguments, printed as `println` would print them; `{2,5}` right-aligns to five characters and `{2,-5}`
+left-aligns.
+
+<Callout type="go">
+`strings.Trim` takes no cutset: it trims whitespace like Go's `TrimSpace`. For a cutset, use `TrimLeft` or
+`TrimRight`; `TrimPrefix` and `TrimSuffix` remove one exact prefix or suffix.
+</Callout>
+
+`s += x` extends `s` in place when nothing else refers to the string, so building text with `+=` in a
+loop takes linear time. `strings.Builder` is the explicit form, with `Write`, `String`, `Len` and
+`Reset`.
+
+## Next
+
+[Structs and methods](/docs/learn/structs): your own types, with methods declared inside them.

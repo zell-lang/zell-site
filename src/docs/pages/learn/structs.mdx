@@ -1,0 +1,97 @@
+A struct groups named fields into one value. Its methods are declared inside the struct body, next to
+the data they work on. There are no classes and no inheritance: a struct is a value with methods, and
+larger types are built by embedding smaller ones.
+
+## Declaring and creating structs
+
+A field is `Name Type`. A literal names the fields it sets, with a colon as in Go; the fields it omits
+get their zero values. A field may also declare a default, which must be a constant.
+
+<Example id="learn/structs/declare" />
+
+Defaults apply in two places: in a literal that leaves the field out, and in `var c Config` with no
+initializer. Everywhere else a missing value is the plain zero value: `new Config` (below), array
+elements and a missing map key.
+
+Field names starting with an uppercase letter are public. Lowercase names are private to the
+namespace: code in other files of the same namespace can use them, code in other namespaces cannot.
+
+<Callout type="go">
+Go has no field defaults, so "constructor that fills in defaults" functions become unnecessary for
+constant defaults. For anything computed, write a `static func New(...)` (next section).
+</Callout>
+
+## Methods
+
+Methods go inside the struct. The receiver is not named: it is always `this`, and it is always a
+pointer to the struct, like `func (c *Counter)` in Go. A method can therefore change the fields of the
+value it is called on. Call a method on a variable and Zell passes the variable's address for you.
+
+`static func` declares a function that belongs to the type rather than to a value, called as
+`Counter.New(...)`. This is the usual place for a constructor.
+
+<Example id="learn/structs/methods" />
+
+`c.Inc` without parentheses is a *method value*: a function bound to `&c`, so calling it changes `c`.
+`Counter.Inc` is a *method expression*: a plain function that takes the receiver as its first
+argument, `func(*Counter)`.
+
+<Callout type="go">
+There are no value receivers. Every method sees the original through `this`, and a method that should
+not modify anything simply does not assign to `this`. When you want a method to work on a copy, make
+the copy yourself, for example by passing the struct by value to a function, as `bumpCopy` does.
+</Callout>
+
+## Values and pointers
+
+A struct is a value. Assigning it, passing it to a function or storing it in a slice copies all its
+fields. To share one struct, take its address with `&x`, or allocate it with `new T{...}`, which
+returns a `*T`. Fields and methods are reached through a pointer with the same `.` as through a value.
+
+<Example id="learn/structs/values" />
+
+The `for` loop variable is a copy of each element, as in Go; index the slice (`pts[0].X = ...`) to
+change an element in place. A pointer is reference-counted: the heap object lives while some pointer
+to it exists, and is freed as soon as the last one goes away. [Memory and resources](/docs/learn/memory)
+covers ownership, `weak` pointers and what happens when pointers form a cycle.
+
+## Embedding
+
+A field written as a bare type name embeds that struct. Its fields and methods are *promoted*: `d.Name`
+means `d.Animal.Name`, and `d.Intro()` calls `Animal`'s method. A field or method of the outer struct
+with the same name hides the promoted one; the embedded struct is still reachable by its type name.
+
+<Example id="learn/structs/embedding" />
+
+Embedding is composition, not inheritance. `Intro` belongs to `Animal`, so its call to `this.Sound()`
+is `Animal.Sound`, even when it runs on behalf of a `Dog`. If you need the outer type to supply
+behaviour to the inner one, pass it in as an [interface](/docs/learn/interfaces).
+
+A promoted method counts as a method of the outer struct, so `Dog` satisfies every interface `Animal`
+does.
+
+## Printing and comparing
+
+`println` cannot print an arbitrary struct; the compiler says so and asks you to print the fields. Give
+the struct a `String() string` method and `println`, `fmt.Format` and `fmt.Sprintf` use it, also for
+elements of a slice.
+
+Structs have no built-in `==`. Declaring `Equals(other T) bool` enables `==` and `!=`; declaring
+`Compare(other T) int` (negative, zero or positive) enables `<`, `<=`, `>` and `>=`.
+
+<Example id="learn/structs/printing" />
+
+The same mechanism covers arithmetic: `a + b` on structs calls `a.Add(b)`, and `Sub`, `Mul`, `Div`,
+`Rem` and `Neg` work the same way. The left operand picks the method and the call is direct, with no
+dynamic dispatch. Only this fixed set of operators can be overloaded.
+
+<Callout type="go">
+In Go two structs compare with `==` when all their fields do. In Zell that is a compile error until you
+write `Equals`: a struct holding a pointer or a slice rarely has an obvious equality, so the type
+decides.
+</Callout>
+
+## Next
+
+[Interfaces](/docs/learn/interfaces): how a struct satisfies an interface without declaring it, type
+switches, and what a call through an interface costs.

@@ -1,0 +1,26 @@
+namespace basics
+
+import io
+
+func main() {
+    var name = "Zell"
+    var greeting = "Hello, " + name + "!"
+    println(greeting)
+    println("bytes:", len(greeting))
+
+    // Strings are immutable; += builds a new string.
+    var path = "usr"
+    path += "/local"
+    println(path)
+
+    // == and < compare byte by byte.
+    println("abc" == "abc", "apple" < "banana", "Z" < "a")
+
+    println(strings.Repeat("-", 10))
+    println(strings.ToUpper(name), strings.ToLower(name))
+
+    // Raw strings keep backslashes and newlines as they are.
+    var raw = `C:\temp\new`
+    println(raw)
+    println("tab:\t|", "quote: \"q\"")
+}

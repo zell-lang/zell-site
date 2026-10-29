@@ -1,0 +1,39 @@
+namespace closures
+
+import io
+
+func double(x int) int { return x * 2 }
+
+// Takes a function value of type func(int) int.
+func apply(xs []int, f func(int) int) []int {
+    var out []int
+    for x in xs {
+        out = append(out, f(x))
+    }
+    return out
+}
+
+// Returns a closure that keeps its own counter.
+func counter() func() int {
+    var n = 0
+    return func() int {
+        n += 1
+        return n
+    }
+}
+
+func main() {
+    var xs = [1, 2, 3]
+    println(apply(xs, double))                // a named function
+    println(apply(xs, (x int) => x * x))      // a short lambda
+    println(apply(xs, x => x + 10))           // parameter type inferred
+
+    var offset = 100
+    println(apply(xs, x => x + offset))       // captures offset
+
+    var next = counter()
+    next()
+    next()
+    var other = counter()
+    println(next(), other())
+}

@@ -1,0 +1,23 @@
+namespace basics
+
+import io
+
+func main() {
+    var ages = map[string]int{"ann": 31, "bob": 25}
+
+    ages["cy"] = 40     // insert
+    ages["bob"] = 26    // update
+    println(len(ages), ages["bob"])
+
+    // A missing key reads as the zero value of the value type.
+    println(ages["zed"])
+
+    delete(ages, "ann")
+    println(len(ages), ages["ann"])
+
+    // An empty map, then compound assignment on an entry.
+    var hits = map[string]int{}
+    hits["/"] += 1
+    hits["/"] += 1
+    println(hits["/"])
+}

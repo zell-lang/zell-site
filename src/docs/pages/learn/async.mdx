@@ -1,0 +1,129 @@
+Zell runs concurrent code as **tasks** on a pool of worker threads, one per core, with `async` and
+`await` in the language, as in C# or Rust with Tokio. I/O in the standard library is asynchronous, so a
+task that waits for a socket or a timer frees its thread for other tasks. This page covers starting and
+awaiting tasks, waiting for several at once, channels, mutexes, and cancellation.
+
+## Tasks and `await`
+
+An `async func` returns `Task<T>`. **Calling it starts it**; `await` waits for its result. `await` is
+allowed only inside `async` functions, and `main` can be `async`.
+
+<Example id="learn/async/tasks" />
+
+The body of an `async` function runs on the caller's thread until it first suspends, so both `start`
+lines print before `waiting`. A call that never suspends costs about as much as a plain function call
+and creates no task. After the first suspension the task continues on any worker, and the scheduler
+switches tasks only at `await` points. A long CPU-bound loop should `await task.Yield()` now and then
+to let other tasks run.
+
+Errors and `await` combine: for a `Task<T!>`, `await f()?` waits and passes the error up, and
+`try await f() catch err { … }` handles it, as described in [Errors](/docs/learn/errors).
+
+| Function | What it does |
+|---|---|
+| `task.Delay(ms)` | a task that completes after `ms` milliseconds |
+| `task.Yield()` | lets other tasks run |
+| `task.Spawn(f)` | runs `f` (a `func() Task<T>`) on a worker thread, returns its task |
+| `task.Go(f)` | the same for `func() Task<void>` |
+| `t.Cancel()` | cancels task `t` and the tasks it started |
+| `task.Timeout(t, ms)` | `true` if `t` finished within `ms`; `t` keeps running either way |
+
+<Callout type="go">
+There is no `go` statement: calling an `async` function already starts it, and the returned `Task<T>`
+carries the result, so you do not need a channel or a `WaitGroup` just to get a value back.
+</Callout>
+
+## Waiting for several tasks
+
+`task.All` waits for every task and returns all results. With a fixed list of tasks it returns a
+tuple; over a slice `[]Task<T>` it returns `[]T` in the order of the slice. `task.Any` returns the result
+of the first task to finish and cancels the others.
+
+<Example id="learn/async/all-any" />
+
+The loser of `task.Any` was sleeping for a minute, yet the program ends at once: cancellation wakes a
+`task.Delay` immediately.
+
+When the tasks return `T!`, `task.All` is fallible too. The first task to fail, first in time rather
+than in argument order, decides the error, and its failure cancels the tasks still running. `task.All`
+returns after they have finished, so nothing keeps running in the background.
+
+<Example id="learn/async/all-errors" />
+
+## Channels
+
+`task.Channel<T>(n)` creates a FIFO channel with room for `n` values; with `n = 0` it is unbuffered, and
+every `Send` waits until a receiver takes the value. Copies of a channel refer to the same channel.
+
+- `await ch.Send(v)` sends; sending on a closed channel panics.
+- `await ch.Recv()` has type `T!`: it fails once the channel is closed and empty.
+- `for v in ch` receives until then.
+- `ch.Close()` closes the channel; values already in the buffer can still be received.
+
+<Example id="learn/async/channels" />
+
+Here the worker closes `counts` when `lines` runs dry, which ends the `for` loop in `main`. With several
+senders on one channel, the order in which their messages arrive depends on scheduling.
+
+## Shared state: `task.Mutex`
+
+Prefer channels for passing data from task to task. When tasks share a value, guard it with
+`task.Mutex`. Its zero value is unlocked, so it can sit in a struct field. `await mu.Lock()` waits for
+the lock, `mu.Unlock()` releases it, and `mu.TryLock()` takes it only if it is free. A
+`defer this.mu.Unlock()` right after the lock releases it on every path, including a panic.
+
+<Example id="learn/async/mutex" />
+
+`task.Go` starts each visitor on a worker thread, so they really run in parallel, and `task.All` over
+the slice waits for all of them. `task.Mutex` follows Go's `sync.Mutex` rules: it is not re-entrant, and
+the order in which waiters get the lock is not guaranteed, but a task that has waited more than about a
+millisecond switches the mutex to first-come, first-served, so no task starves. `task.WaitGroup`
+(`Add`, `Done`, `await Wait()`) is also available when you do not hold the tasks themselves.
+
+## Cancellation
+
+Cancellation belongs to the **task context**, which every task inherits from the code that started it.
+Cancelling a context cancels every task in it, and their children. Cancellation is cooperative: it
+takes effect at `await` points.
+
+- A cancelled wait that has a `T!` result, such as `Recv` or a network read, fails with
+  `task.ErrCancelled`, which you pass up with `?` like any other error.
+- `task.Delay` and `Send` wake at once but cannot return an error; check with `task.CheckCancelled()?`
+  after them, and in long synchronous loops.
+- `task.NewCancel()` returns a handle: run code in its `Context` with `task.SpawnWith` (or
+  `task.RunWith`), and call `Cancel()` from outside, for example on shutdown.
+
+<Example id="learn/async/cancel" />
+
+Because the channel is unbuffered, each `Send` returns only after `sum` has taken the value, so the
+total is always 35 when `Cancel` runs, and the pending `Recv` fails with `task cancelled`.
+
+<Callout type="go">
+There is no `context.Context` parameter to thread through every function. The context travels with the
+task: code started inside a cancelled context sees the cancellation in its own waits, and
+`task.ErrCancelled` plays the role of `ctx.Err()`.
+</Callout>
+
+## Timeouts
+
+`task.WithTimeout(ms, f)` runs `f` in a context that is cancelled after `ms` milliseconds. Its result
+is `f`'s task, so a function that returns `T!` reports the timeout as `task.ErrCancelled`.
+
+<Example id="learn/async/timeout" />
+
+`slowQuery` would sleep for a minute; the deadline wakes its `Delay` after 20 ms, and
+`task.CheckCancelled()?` turns the cancellation into an error. If you only want to stop waiting and let
+the task finish on its own, use `await task.Timeout(t, ms)` instead: it reports whether `t` finished and
+does not cancel it.
+
+## When a task panics
+
+A panic ends only the task it happens in. Its `defer`s run and its values are dropped (see
+[Memory and resources](/docs/learn/memory)), and the owner of the task learns about it: awaiting a
+`Task<T!>` gives an error for which `errors.Is(err, task.ErrPanic)` is true, and awaiting a `Task<T>`
+panics again in the awaiting task. A panic in a task that nobody awaits is printed to stderr, and the
+program keeps running.
+
+## Next
+
+[Packages](/docs/learn/packages): split a program into packages, add dependencies and publish your own.

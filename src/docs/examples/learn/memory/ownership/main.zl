@@ -1,0 +1,28 @@
+namespace pool
+
+import io
+
+struct Conn {
+    id int
+
+    func Drop() {
+        println("conn", this.id, "closed")
+    }
+}
+
+// The parameter takes ownership: Drop runs when send returns.
+func send(c Conn, msg string) {
+    println("conn", c.id, "sends", msg)
+}
+
+func main() {
+    send(Conn{id: 1}, "hello")
+    println("after send")
+
+    var c = new Conn{id: 2}         // a heap object, shared by pointer
+    var idle = [c]                  // the slice holds a second reference
+    c = nil
+    println("idle connections:", len(idle))
+    idle = []
+    println("end of main")
+}

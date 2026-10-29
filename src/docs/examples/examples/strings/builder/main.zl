@@ -1,0 +1,33 @@
+namespace builder
+
+import io
+
+// Joining many pieces with += copies the string every time;
+// strings.Builder appends into one growing buffer.
+func csvLine(fields []string) string {
+    var b = strings.Builder{}
+    for i, f in fields {
+        if i > 0 {
+            b.Write(",")
+        }
+        if strings.Contains(f, ",") {
+            b.Write("\"" + f + "\"")
+        } else {
+            b.Write(f)
+        }
+    }
+    return b.String()
+}
+
+func main() {
+    println(csvLine(["id", "name", "city"]))
+    println(csvLine(["7", "Ann", "Oslo, Norway"]))
+
+    var b = strings.Builder{}
+    for i in 1..4 {
+        b.Write(fmt.Format("[{0}]", i))
+    }
+    println(b.String(), "length", b.Len())
+    b.Reset()
+    println("after Reset:", b.Len())
+}

@@ -1,0 +1,24 @@
+namespace parse
+
+import encoding
+import io
+
+struct Config {
+    Host    string
+    Port    int
+    Debug   bool
+    Origins []string
+}
+
+func main() void! {
+    var text = `{"Host": "localhost", "Port": 8080, "Origins": ["a.org", "b.org"], "Extra": 1}`
+
+    // Parse<T> fills a T; unknown keys are ignored, missing fields keep their zero value.
+    var cfg = json.Parse<Config>(text)?
+    println(cfg.Host, cfg.Port, cfg.Debug, cfg.Origins)
+
+    // Slices and maps with string keys parse the same way.
+    var ports = json.Parse<[]int>("[80, 443]")?
+    var limits = json.Parse<map[string]float>(`{"cpu": 0.5, "ram": 2}`)?
+    println(ports, limits["cpu"], limits["ram"])
+}

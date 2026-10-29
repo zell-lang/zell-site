@@ -1,0 +1,13 @@
+run, fail = false
+  done
+  attempts at exit: 2
+  attempts at defer: 1
+  undo lock
+  undo open
+0
+run, fail = true
+  attempts at exit: 2
+  attempts at defer: 1
+  undo lock
+  undo open
+-1

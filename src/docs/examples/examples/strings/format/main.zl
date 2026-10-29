@@ -1,0 +1,23 @@
+namespace format
+
+import io
+
+func main() {
+    var name = "disk"
+    var used = 0.731
+    var files = 42
+
+    // fmt.Format: {N} is argument N, printed as println prints it.
+    println(fmt.Format("{0}: {1} files, {2} used", name, files, used))
+    println(fmt.Format("{1} then {0}, {1} again", "a", "b"))
+
+    // fmt.Sprintf: Go-style verbs for widths, precision and bases.
+    println(fmt.Sprintf("%-6s|%6.1f%%|%04d", name, used * 100.0, files))
+    println(fmt.Sprintf("hex %x, octal %o, binary %b", 255, 8, 5))
+    println(fmt.Sprintf("%q %v %c", "quoted", true, 'z'))
+
+    // Padding helpers for simple tables.
+    for row in [["id", "name"], ["7", "ann"], ["1024", "bob"]] {
+        println(strings.PadLeft(row[0], 5, " "), strings.PadRight(row[1], 6, ".") + "|")
+    }
+}

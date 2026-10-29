@@ -1,0 +1,22 @@
+namespace search
+
+import io
+
+func main() {
+    var langs = ["go", "rust", "zell", "c"]
+
+    println(slices.Contains(langs, "zell"), slices.Index(langs, "rust"), slices.Index(langs, "java"))
+
+    // IndexFunc finds the first element that matches a predicate.
+    var i = slices.IndexFunc(langs, (s string) => len(s) == 1)
+    println(i, langs[i])
+
+    // BinarySearch on a sorted slice returns the position and whether it was found.
+    var sorted = [1, 3, 5, 7, 9]
+    var (at, found) = slices.BinarySearch(sorted, 7)
+    println(at, found)
+    var (pos, ok) = slices.BinarySearch(sorted, 4)
+    println(pos, ok)
+
+    println(slices.Min(sorted), slices.Max(sorted), slices.Sum(sorted))
+}

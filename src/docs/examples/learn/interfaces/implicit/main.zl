@@ -1,0 +1,42 @@
+namespace alerts
+
+import io
+
+interface Notifier {
+    func Notify(msg string) bool
+}
+
+struct Email {
+    To string
+
+    func Notify(msg string) bool {
+        println("mail to", this.To + ":", msg)
+        return true
+    }
+}
+
+// implements is optional: it only asks the compiler to check here.
+struct Pager implements Notifier {
+    Number string
+
+    func Notify(msg string) bool {
+        println("page", this.Number + ":", msg)
+        return len(msg) <= 16
+    }
+}
+
+func broadcast(targets []Notifier, msg string) int {
+    var ok = 0
+    for t in targets {
+        if t.Notify(msg) {
+            ok += 1
+        }
+    }
+    return ok
+}
+
+func main() {
+    var targets []Notifier = [Email{To: "ops@example.com"}, Pager{Number: "555-0100"}]
+    println(broadcast(targets, "disk full"), "delivered")
+    println(broadcast(targets, "disk full on db-1, db-2"), "delivered")
+}

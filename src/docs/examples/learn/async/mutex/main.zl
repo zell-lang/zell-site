@@ -1,0 +1,37 @@
+namespace hits
+
+import io
+
+struct Stats {
+    mu   task.Mutex                 // the zero value is unlocked
+    hits map[string]int
+
+    async func Add(page string) {
+        await this.mu.Lock()
+        defer this.mu.Unlock()
+        this.hits[page] += 1
+    }
+}
+
+async func visitor(s *Stats, page string) {
+    for _ in 0..100 {
+        await s.Add(page)
+        await task.Yield()
+    }
+}
+
+async func main() {
+    var s = new Stats{hits: map[string]int{}}
+    var ts []Task<void> = []
+    for i in 0..8 {
+        var page = "/home"
+        if i % 2 == 1 {
+            page = "/docs"
+        }
+        ts = append(ts, task.Go(func() Task<void> {   // run on any worker thread
+            return visitor(s, page)
+        }))
+    }
+    await task.All(ts)
+    println(s.hits["/home"], s.hits["/docs"])
+}

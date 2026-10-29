@@ -1,0 +1,29 @@
+namespace window
+
+import io
+
+func main() {
+    var nums = [10, 20, 30, 40, 50]
+    println(nums[1..3], nums[..2], nums[3..])   // half-open ranges
+
+    // A sub-slice shares the buffer of the original.
+    var mid = nums[1..4]
+    mid[0] = 21
+    println(nums)
+
+    // append writes into the shared buffer while there is room.
+    var head = nums[..2]
+    head = append(head, 99)
+    println(nums, head)
+
+    // Copy first to get an independent slice.
+    var own = slices.Clone(nums[..2])
+    own = append(own, 0)
+    println(nums, own)
+
+    // Arrays have a fixed length and copy on assignment.
+    var a [3]int = [1, 2, 3]
+    var b = a
+    b[0] = 100
+    println(a, b, len(a))
+}

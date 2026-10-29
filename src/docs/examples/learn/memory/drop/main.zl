@@ -1,0 +1,34 @@
+namespace files
+
+import io
+
+struct File {
+    name string
+
+    func Drop() {
+        println("close", this.name)
+    }
+}
+
+func open(name string) File {
+    println("open", name)
+    return File{name: name}
+}
+
+func copyData(fail bool) void! {
+    var src = open("src.txt")
+    var dst = open("dst.txt")
+    if fail {
+        return error("disk full")       // both files are closed on this path too
+    }
+    println("copy", src.name, "to", dst.name)
+}
+
+func main() {
+    try copyData(false) catch err {
+        println("error:", err)
+    }
+    try copyData(true) catch err {
+        println("error:", err)
+    }
+}

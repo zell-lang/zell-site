@@ -1,0 +1,34 @@
+namespace shell
+
+import io
+
+enum Command {
+    Cd(path string)
+    Copy(from string, to string, overwrite bool)
+    Exit(code int)
+    Pwd
+}
+
+func parse(words []string) Command {
+    switch words[0] {
+        case "cd":   return Command.Cd(words[1])
+        case "cp":   return Command.Copy(words[1], words[2], len(words) > 3)
+        case "exit": return Command.Exit(try strconv.Atoi(words[1]) else 1)
+        default:     return Command.Pwd
+    }
+}
+
+func run(c Command) string {
+    switch c {
+        case Command.Cd(p):          return "changing to " + p
+        case Command.Copy(f, t, _):  return "copying " + f + " to " + t
+        case Command.Exit(code):     return "exit status " + strconv.Itoa(code)
+        case Command.Pwd:            return "/home"
+    }
+}
+
+func main() {
+    for line in ["cd /tmp", "cp a.txt b.txt -f", "exit 3", "pwd"] {
+        println(run(parse(strings.Split(line, " "))))
+    }
+}

@@ -1,0 +1,30 @@
+namespace group
+
+import io
+
+func main() {
+    var words = ["apple", "avocado", "banana", "blueberry", "cherry"]
+
+    // A map of slices: append to the slice stored under each key.
+    var byLetter = map[string][]string{}
+    for w in words {
+        var first = w[0..1]
+        byLetter[first] = append(byLetter[first], w)
+    }
+
+    for k in maps.SortedKeys(byLetter) {
+        println(k, byLetter[k])
+    }
+
+    // A map of maps: create the inner map on first use.
+    var scores = map[string]map[string]int{}
+    for row in [["red", "ann", "3"], ["red", "bob", "5"], ["blue", "cy", "2"]] {
+        var team = row[0]
+        var _, ok = scores[team]
+        if !ok {
+            scores[team] = map[string]int{}
+        }
+        scores[team][row[1]] = try strings.ToInt(row[2]) else 0
+    }
+    println(len(scores), scores["red"]["bob"], len(scores["blue"]))
+}

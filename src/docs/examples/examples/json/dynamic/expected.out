@@ -1,0 +1,7 @@
+object 4 [name tags stars meta]
+zell 42
+0 fast
+1 safe
+true true true
+-1
+["fast","safe"]

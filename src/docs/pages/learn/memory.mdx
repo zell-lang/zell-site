@@ -1,0 +1,178 @@
+Zell has no tracing garbage collector. Heap objects are reference counted and freed the moment the
+last reference goes away, and values on the stack are freed at the end of their block. Because the
+moment of release is known, a type can tie a resource to its lifetime: a file closes when its value
+disappears, on every path out of the function. This page covers what you need to write correct code:
+values and references, `Drop`, `defer`, weak references, and the cycle collector that catches the
+cycles you did not break.
+
+<Callout type="go">
+There is no GC to wait for and no finalizers. Destruction is deterministic: the `Drop` of a value runs
+at a known point, as with C++ destructors or Rust's `Drop`. A reference cycle is the one case that
+needs your attention (see "Reference cycles" below).
+</Callout>
+
+## Values and references
+
+Structs, fixed-size arrays, numbers and tuples are values: they live in variables and are copied on
+assignment. `new T{}`, slices, maps, strings, closures, errors and values stored in interfaces live on
+the heap with a reference count. Copying a pointer or a slice adds a reference to the same object.
+
+<Example id="learn/memory/values" />
+
+You never free anything by hand. The compiler inserts the count updates and removes most of them:
+parameters are borrowed, so a call does not touch the count, and objects that never leave a function
+are placed on its stack. Counts are thread-safe, so a value can be shared between tasks; shared mutable
+state still needs a [mutex or a channel](/docs/learn/async).
+
+## Destructors: `Drop`
+
+A method `func Drop()` (no parameters, no result) is a destructor. It runs exactly once, when the value
+disappears:
+
+- for a value in a variable, at the end of its block, including early exits through `return`, `?`,
+  `break`, `continue` and `try … else`;
+- for a heap object, when the last reference goes;
+- variables of a block are dropped in reverse order of declaration;
+- for a struct, its own `Drop` runs first, then its fields are released in declaration order.
+
+<Example id="learn/memory/drop" />
+
+The error path closes both files without a single line of cleanup code. That is the usual way to
+manage a resource in Zell: give its type a `Drop`, and the end of the block is the cleanup.
+
+`Drop` cannot be called explicitly. When you need the result of closing (a failed flush, say), add a
+`Close() void!` method, call it yourself and handle the error, and let `Drop` skip what `Close`
+already did.
+
+## Ownership and move-only values
+
+Two copies of a file handle would close the file twice, so a value with a destructor (or a struct that
+contains one by value) is **move-only**. You create it in place, from a literal or a function result,
+and pass it on by value, which transfers ownership: the receiving function now owns it, and the `Drop`
+runs when that function is done with it. Copying one from a variable does not compile:
+
+```zell
+var a = File{name: "a"}
+var b = a
+```
+
+```text
+error: cannot copy a value of type File: it has a destructor (Drop), so it is move-only
+  = note: create it in place (var x = T{...}, a function result) and share it through a pointer (&x or new T{...})
+```
+
+To share a resource, put it on the heap with `new` and pass the pointer. Every copy of the pointer is a
+reference; the destructor runs when the last one is gone. Move-only values cannot be stored in slices,
+maps or tuples directly: store `*T` there.
+
+<Example id="learn/memory/ownership" />
+
+## `defer`
+
+`defer` schedules a call for the moment the function returns, as in Go. The arguments are evaluated
+when the `defer` statement runs, and deferred calls run last-in, first-out. On the way out, deferred
+calls run first, then the function's variables are dropped.
+
+<Example id="learn/memory/defer" />
+
+`defer` and `Drop` cover different needs. `Drop` belongs to a type and runs wherever a value of it ends.
+`defer` belongs to one function: use it for an action that is not tied to a value, like unlocking a
+mutex or logging the end of a job. A deferred call whose result is `T!` does not compile, because the
+error would be lost; handle it in a deferred closure:
+
+```zell
+defer func() {
+    try conn.Close() catch err { println("close:", err) }
+}()
+```
+
+### `defer await`
+
+A `Drop` cannot wait. When cleanup has to wait (flush a buffer to a socket, send a goodbye message),
+give the type an `async` method and defer it with `defer await` in an `async` function. The call runs
+on every exit path, in the same last-in, first-out order as plain `defer`.
+
+<Example id="learn/memory/defer-await" />
+
+The rules mirror `defer`: the receiver and arguments are evaluated at once, the result is discarded, and
+a `T!` result must be handled in a deferred `async` closure. `defer await` is only allowed in `async`
+functions, not inside a loop, and at most eight `defer`s per function. When the task is cancelled, the
+deferred `await` still runs; when it panics, it is skipped.
+
+### Panics
+
+A panic ends the task it happens in. Unwinding runs the task's pending `defer`s (except `defer await`)
+and drops its live values, so a mutex released in a `defer` is released and no memory leaks. A panic
+in `main` outside any task ends the process with exit status 2.
+
+## Weak references
+
+Reference counting cannot free a cycle on its own: a parent that points to its child, which points
+back to the parent, keeps both alive. Make the back reference `weak *T`. A weak reference does not keep
+the object alive; reading it gives a `*T`, or `nil` once the object is gone. A `*T` converts to
+`weak *T` implicitly.
+
+<Example id="learn/memory/weak" />
+
+Weak references are cleared before the destructor runs, so nothing can reach a half-destroyed object.
+Use them wherever a reference points "back" or "up": parents, owners, observer lists, caches.
+
+## Reference cycles
+
+The compiler builds a graph of which types reference which and warns about every type whose values can
+form a cycle of strong references:
+
+```text
+warning: W0001 type Session can form a reference cycle through field Peer (*Session); consider weak *Session or a Drop that breaks the cycle
+```
+
+Pick the answer that matches the data:
+
+| The data is | Write |
+|---|---|
+| a tree or a list with a back reference | make the back reference `weak *T`; the warning goes away |
+| a real graph that can have cycles | `@allowCycle` on the type: silences the warning, the collector handles it |
+| never cyclic, by construction | `@acyclic` on the type: no warning, no collector cost; a promise you must keep |
+
+`--deny-warnings` on `zell build`, `run` or `check` turns warnings into errors for CI.
+
+### The cycle collector
+
+Cycles you did not break are freed by the **cycle collector**. It is not a tracing GC: it only looks at
+objects of types that can form a cycle, starts from those whose count recently went down without
+reaching zero, and never scans the stack, the globals or the rest of the heap. Other threads keep
+running while it works. When it finds a group of objects that only reference each other, it runs all
+their `Drop`s (each still sees intact fields) and frees them.
+
+<Example id="learn/memory/cycles" />
+
+`ZELL_CYCLES` in the environment chooses when it runs: `auto` (the default) runs it after enough
+candidates have been recorded, `manual` only on `runtime.CollectCycles()`, and `off` never. Until the
+collector reaches a cycle, its objects stay alive, so a `Drop` that must run at a precise moment (closing
+a file) belongs to a type whose cycles you break with `weak`. Cycles through `error` values and through
+tasks are never collected.
+
+### Finding leaks
+
+`zell run --leak-check` (also `zell build --leak-check`) reports objects still alive at exit and exits
+with status 66. Run without the collector, the example above reports its cycle:
+
+```sh
+ZELL_CYCLES=off zell run --leak-check .
+```
+
+```text
+leak: 2 objects
+  2 x sessions.Session
+  cycle through Session.Peer (make one field of the cycle `weak *T` to break it)
+```
+
+In `auto` mode the check collects cycles one last time before it reports, so what remains is a real
+leak. A type marked `@acyclic` that turns up in a cycle is reported as
+`type Node is @acyclic but was found in a cycle`. A clean program prints nothing extra and exits with
+status 0; running your tests this way keeps leaks from creeping in.
+
+## Next
+
+[Async and tasks](/docs/learn/async): tasks, `await`, channels and mutexes, and cancellation through
+the task context.

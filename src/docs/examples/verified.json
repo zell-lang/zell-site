@@ -27,6 +27,118 @@
     "zell": "0.1.5",
     "hash": "3da12ee2"
   },
+  "examples/json/attributes": {
+    "zell": "0.1.5",
+    "hash": "7d60cd28"
+  },
+  "examples/json/dynamic": {
+    "zell": "0.1.5",
+    "hash": "2d0ec7d2"
+  },
+  "examples/json/enums": {
+    "zell": "0.1.5",
+    "hash": "65f9df64"
+  },
+  "examples/json/errors": {
+    "zell": "0.1.5",
+    "hash": "7755e2ea"
+  },
+  "examples/json/format": {
+    "zell": "0.1.5",
+    "hash": "1c3a32fa"
+  },
+  "examples/json/nested": {
+    "zell": "0.1.5",
+    "hash": "e2ba6eb6"
+  },
+  "examples/json/parse": {
+    "zell": "0.1.5",
+    "hash": "97f8f5cb"
+  },
+  "examples/maps/basics": {
+    "zell": "0.1.5",
+    "hash": "c02db73f"
+  },
+  "examples/maps/count": {
+    "zell": "0.1.5",
+    "hash": "9259e3c7"
+  },
+  "examples/maps/group": {
+    "zell": "0.1.5",
+    "hash": "b0cebfcc"
+  },
+  "examples/maps/lookup": {
+    "zell": "0.1.5",
+    "hash": "2eb0a97b"
+  },
+  "examples/maps/sets": {
+    "zell": "0.1.5",
+    "hash": "7d925597"
+  },
+  "examples/maps/sorted": {
+    "zell": "0.1.5",
+    "hash": "fa4a1e21"
+  },
+  "examples/maps/structs": {
+    "zell": "0.1.5",
+    "hash": "c65fd29d"
+  },
+  "examples/slices/basics": {
+    "zell": "0.1.5",
+    "hash": "08d3faf3"
+  },
+  "examples/slices/edit": {
+    "zell": "0.1.5",
+    "hash": "b99b3e49"
+  },
+  "examples/slices/grid": {
+    "zell": "0.1.5",
+    "hash": "096b41a2"
+  },
+  "examples/slices/search": {
+    "zell": "0.1.5",
+    "hash": "980b16b6"
+  },
+  "examples/slices/sorting": {
+    "zell": "0.1.5",
+    "hash": "ce63a350"
+  },
+  "examples/slices/subslices": {
+    "zell": "0.1.5",
+    "hash": "4578ee68"
+  },
+  "examples/slices/transform": {
+    "zell": "0.1.5",
+    "hash": "6331c17e"
+  },
+  "examples/strings/basics": {
+    "zell": "0.1.5",
+    "hash": "6fbc4006"
+  },
+  "examples/strings/builder": {
+    "zell": "0.1.5",
+    "hash": "ab974353"
+  },
+  "examples/strings/convert": {
+    "zell": "0.1.5",
+    "hash": "0acc3842"
+  },
+  "examples/strings/format": {
+    "zell": "0.1.5",
+    "hash": "d3ef76b6"
+  },
+  "examples/strings/runes": {
+    "zell": "0.1.5",
+    "hash": "72fd0f93"
+  },
+  "examples/strings/search": {
+    "zell": "0.1.5",
+    "hash": "c79b916d"
+  },
+  "examples/strings/split": {
+    "zell": "0.1.5",
+    "hash": "1031e99a"
+  },
   "hello/first": {
     "zell": "0.1.5",
     "hash": "84b37bbf"
@@ -34,5 +146,173 @@
   "hello/project": {
     "zell": "0.1.5",
     "hash": "9033ee30"
+  },
+  "learn/async/all-any": {
+    "zell": "0.1.5",
+    "hash": "df363a06"
+  },
+  "learn/async/all-errors": {
+    "zell": "0.1.5",
+    "hash": "b9f3719c"
+  },
+  "learn/async/cancel": {
+    "zell": "0.1.5",
+    "hash": "8c994be5"
+  },
+  "learn/async/channels": {
+    "zell": "0.1.5",
+    "hash": "23776b84"
+  },
+  "learn/async/mutex": {
+    "zell": "0.1.5",
+    "hash": "c6bfed23"
+  },
+  "learn/async/tasks": {
+    "zell": "0.1.5",
+    "hash": "49ee6c83"
+  },
+  "learn/async/timeout": {
+    "zell": "0.1.5",
+    "hash": "00fc2a8f"
+  },
+  "learn/basics/closures": {
+    "zell": "0.1.5",
+    "hash": "246de3c8"
+  },
+  "learn/basics/functions": {
+    "zell": "0.1.5",
+    "hash": "4173b163"
+  },
+  "learn/basics/types": {
+    "zell": "0.1.5",
+    "hash": "560ae2ee"
+  },
+  "learn/basics/variables": {
+    "zell": "0.1.5",
+    "hash": "39e64077"
+  },
+  "learn/basics/variadic": {
+    "zell": "0.1.5",
+    "hash": "6c2d7a00"
+  },
+  "learn/collections/maps": {
+    "zell": "0.1.5",
+    "hash": "9f10a6de"
+  },
+  "learn/collections/slices": {
+    "zell": "0.1.5",
+    "hash": "f75d418c"
+  },
+  "learn/collections/slicing": {
+    "zell": "0.1.5",
+    "hash": "c0b740e4"
+  },
+  "learn/collections/strings": {
+    "zell": "0.1.5",
+    "hash": "67d3dcaf"
+  },
+  "learn/collections/text": {
+    "zell": "0.1.5",
+    "hash": "ad307142"
+  },
+  "learn/control-flow/defer": {
+    "zell": "0.1.5",
+    "hash": "2102ca40"
+  },
+  "learn/control-flow/if": {
+    "zell": "0.1.5",
+    "hash": "1047238d"
+  },
+  "learn/control-flow/labels": {
+    "zell": "0.1.5",
+    "hash": "b7d211c5"
+  },
+  "learn/control-flow/loops": {
+    "zell": "0.1.5",
+    "hash": "357e0050"
+  },
+  "learn/control-flow/switch": {
+    "zell": "0.1.5",
+    "hash": "998b09ad"
+  },
+  "learn/enums/data": {
+    "zell": "0.1.5",
+    "hash": "20d9ebf0"
+  },
+  "learn/enums/methods": {
+    "zell": "0.1.5",
+    "hash": "b122e2ec"
+  },
+  "learn/enums/plain": {
+    "zell": "0.1.5",
+    "hash": "d8dc5786"
+  },
+  "learn/interfaces/defaults": {
+    "zell": "0.1.5",
+    "hash": "9afba51c"
+  },
+  "learn/interfaces/implicit": {
+    "zell": "0.1.5",
+    "hash": "260389ac"
+  },
+  "learn/interfaces/sealed": {
+    "zell": "0.1.5",
+    "hash": "5af23ecd"
+  },
+  "learn/interfaces/switch": {
+    "zell": "0.1.5",
+    "hash": "c203ac8d"
+  },
+  "learn/interfaces/values": {
+    "zell": "0.1.5",
+    "hash": "66ed709c"
+  },
+  "learn/memory/cycles": {
+    "zell": "0.1.5",
+    "hash": "19ac6b87"
+  },
+  "learn/memory/defer": {
+    "zell": "0.1.5",
+    "hash": "1e86d800"
+  },
+  "learn/memory/defer-await": {
+    "zell": "0.1.5",
+    "hash": "a9120710"
+  },
+  "learn/memory/drop": {
+    "zell": "0.1.5",
+    "hash": "04d75930"
+  },
+  "learn/memory/ownership": {
+    "zell": "0.1.5",
+    "hash": "904b74d7"
+  },
+  "learn/memory/values": {
+    "zell": "0.1.5",
+    "hash": "8aa4e9e5"
+  },
+  "learn/memory/weak": {
+    "zell": "0.1.5",
+    "hash": "0eb814b2"
+  },
+  "learn/structs/declare": {
+    "zell": "0.1.5",
+    "hash": "604f088d"
+  },
+  "learn/structs/embedding": {
+    "zell": "0.1.5",
+    "hash": "4729259b"
+  },
+  "learn/structs/methods": {
+    "zell": "0.1.5",
+    "hash": "bb4882ac"
+  },
+  "learn/structs/printing": {
+    "zell": "0.1.5",
+    "hash": "cef06e20"
+  },
+  "learn/structs/values": {
+    "zell": "0.1.5",
+    "hash": "905c5095"
   }
 }

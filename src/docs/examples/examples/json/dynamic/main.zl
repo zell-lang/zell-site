@@ -1,0 +1,25 @@
+namespace dynamic
+
+import encoding
+import io
+
+func main() void! {
+    // ParseValue reads any JSON without a struct to match it.
+    var v = json.ParseValue(`{"name": "zell", "tags": ["fast", "safe"], "stars": 42, "meta": null}`)?
+
+    println(v.Type(), v.Len(), v.Keys())
+    println(v.Get("name").String()?, v.Get("stars").Int()?)
+
+    var tags = v.Get("tags")
+    for i in 0..tags.Len() {
+        println(i, tags.Index(i).String()?)
+    }
+
+    // Missing keys read as null; accessors on the wrong kind return an error.
+    println(v.Has("meta"), v.Get("meta").IsNull(), v.Get("nope").IsNull())
+    var stars = try v.Get("name").Int() else -1
+    println(stars)
+
+    // Format writes compact JSON back.
+    println(tags.Format())
+}

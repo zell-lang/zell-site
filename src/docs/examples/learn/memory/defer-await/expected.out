@@ -1,0 +1,4 @@
+conn 1 served
+conn 1 flushed and closed
+conn 2 flushed and closed
+error: bad request on conn 2

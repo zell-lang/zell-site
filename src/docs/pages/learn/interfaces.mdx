@@ -1,0 +1,112 @@
+An interface is a set of method signatures. Any struct or enum that has those methods implements the
+interface; nothing has to declare it. Interfaces are how Zell code abstracts over types: a function that
+takes an interface accepts every type with the right methods, and calls the methods through a table
+chosen at run time.
+
+## Implementing an interface
+
+Declare the methods in an `interface` block, then write types that have them. `Email` and `Pager` below
+both implement `Notifier` because both have `Notify(msg string) bool`. A slice of `Notifier` holds both.
+
+<Example id="learn/interfaces/implicit" />
+
+`struct Pager implements Notifier` is an optional check. Without it, a type that misses a method is
+reported where it is first used as a `Notifier`; with it, the error points at the declaration:
+
+```text
+error: Pager does not implement Notifier: missing method Notify
+```
+
+`implements` changes nothing else. A type with the same methods and no `implements` clause still
+implements the interface, and one type can name several interfaces, separated by commas.
+
+## Values and pointers in an interface
+
+An interface value holds two things: the value and a pointer to its type's method table. When you store
+a struct, the interface gets its own copy, and methods called through the interface change that copy.
+Store a pointer to share the original.
+
+<Example id="learn/interfaces/values" />
+
+The zero value of an interface is `nil`. Calling a method on a `nil` interface panics.
+
+<Callout type="go">
+In Go, `var m Meter = s` does not compile when `Inc` has a pointer receiver, because only `*Sum` has
+that method. In Zell all methods take a pointer, so both `Sum` and `*Sum` implement `Meter`. The
+difference is only whether the interface holds a copy or a reference.
+</Callout>
+
+## Type switches
+
+A `switch` over an interface value can test its dynamic type. `case Click c:` matches when the value
+is a `Click` and binds `c` to it; for a struct type the binding is a copy. `case Timed t:` names another
+interface and matches any value that also implements it. The first matching case wins, and `default`
+takes the rest.
+
+`any` is the interface with no methods: it holds a value of any type, and a type switch takes it apart.
+Integers, floats, `bool` and `char` are stored inside the `any` itself, with no allocation.
+
+<Example id="learn/interfaces/switch" />
+
+`case Click c` matches only a `Click` value, not a `*Click`; to match a pointer, write `case *Click c`.
+`println` of an `any` prints the value it holds.
+
+<Callout type="go">
+Go writes `switch v := x.(type) { case Click: ... }`. Zell uses the ordinary `switch` and puts the
+binding in each case: `switch x { case Click c: ... }`. Every case can bind a different name.
+</Callout>
+
+## Default methods and embedding
+
+An interface may give some methods a body, written in terms of its other methods. A type then has to
+provide only the methods without a body. A type that has its own method of the same name overrides the
+default, also when called through the interface. Inside a default method `this` is the interface value
+itself, since an interface has no fields.
+
+An interface name on its own line inside another interface embeds it: `BufferedSink` has all the
+methods of `Sink` and `Flusher`, defaults included.
+
+<Example id="learn/interfaces/defaults" />
+
+A default method can also be called directly on a value of a type that implements the interface, as
+`c.Info("started")` does above. If two interfaces the type implements both provide a default method
+with that name, the call is ambiguous and you convert the value to the interface you mean.
+
+An interface value converts implicitly to an interface with a subset of its methods: a `BufferedSink`
+can be passed wherever a `Sink` is expected.
+
+## Sealed interfaces
+
+`sealed interface` restricts the implementations to types declared in the same namespace, in any of
+its files. The compiler then knows every implementation, and a type switch without `default` must cover
+them all:
+
+<Example id="learn/interfaces/sealed" />
+
+Remove `case Voucher _` and the program no longer compiles:
+
+```text
+error: switch on sealed interface Payment is not exhaustive: missing Voucher
+```
+
+A complete switch is a terminating statement, so `fee` needs no `return` after it. `case T x` and
+`case *T x` both cover `T`. Use a sealed interface for a closed family of structs that share methods;
+for a closed set of variants that are mostly data, an [enum](/docs/learn/enums) is lighter.
+
+## What a call costs
+
+A method called on a struct is a direct call. The compiler knows the target, LLVM can inline it, and in
+a loop it often disappears entirely. A call through an interface loads the method from the type's table
+and calls it indirectly, which blocks inlining. In the `defer_errors_iface` benchmark (100 million calls
+through a two-implementation interface at one call site, `--release`, on a 16-core AMD Ryzen 7 8845HS
+under Fedora 42, October 2026) an interface call took 1.39 times as long as the same loop in Go 1.24.
+
+Two things keep the cost down. Inside `case T x:` of a type switch on a local interface variable, calls
+through that variable use `T`'s table directly and become ordinary, inlinable calls. And a
+[generic function](/docs/learn/generics) with an interface constraint is compiled per type, so its
+method calls are direct; reach for it in hot code that works with one concrete type at a time.
+
+## Next
+
+[Enums and pattern matching](/docs/learn/enums): closed sets of variants that carry data, and a
+`switch` that takes them apart.

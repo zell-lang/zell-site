@@ -1,0 +1,31 @@
+namespace format
+
+import encoding
+import io
+
+struct Point {
+    X int
+    Y int
+}
+
+struct Shape {
+    Name   string
+    Points []Point
+    Closed bool
+}
+
+func main() {
+    var tri = Shape{Name: "tri", Points: [Point{X: 0, Y: 0}, Point{X: 4, Y: 0}, Point{X: 0, Y: 3}], Closed: true}
+
+    // Fields are written in declaration order under their own names.
+    println(json.Format(tri))
+
+    // FormatIndent(value, prefix, indent) lays it out like Go's MarshalIndent.
+    println(json.FormatIndent(Point{X: 1, Y: 2}, "", "  "))
+
+    // Any supported value works, not only structs.
+    println(json.Format([1.5, 2.0]), json.Format("a \"quoted\" line\n"), json.Format(true))
+
+    // Map keys come out sorted, so the output is stable.
+    println(json.Format(map[string]int{"b": 2, "a": 1, "c": 3}))
+}

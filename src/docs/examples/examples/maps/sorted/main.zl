@@ -1,0 +1,24 @@
+namespace sorted
+
+import io
+
+func main() {
+    var population = map[string]int{"Oslo": 709, "Bergen": 291, "Tromso": 78, "Alta": 21}
+
+    // Map iteration order is unspecified. Sort the keys for stable output.
+    for city in maps.SortedKeys(population) {
+        println(city, population[city])
+    }
+
+    // Or collect the entries and sort them by value.
+    var cities = maps.Keys(population)
+    slices.SortBy(cities, (c string) => -population[c])
+    println(cities)
+
+    // Aggregates do not depend on the order.
+    var total = 0
+    for _, n in population {
+        total += n
+    }
+    println("total:", total)
+}
