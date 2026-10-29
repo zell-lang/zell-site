@@ -44,7 +44,7 @@ of the first task to finish and cancels the others.
 The loser of `task.Any` was sleeping for a minute, yet the program ends at once: cancellation wakes a
 `task.Delay` immediately.
 
-When the tasks return `T!`, `task.All` is fallible too. The first task to fail, first in time rather
+When the tasks return `T!`, `task.All` has a `T!` result too. The first task to fail, first in time rather
 than in argument order, decides the error, and its failure cancels the tasks still running. `task.All`
 returns after they have finished, so nothing keeps running in the background.
 
@@ -126,4 +126,5 @@ program keeps running.
 
 ## Next
 
-[Packages](/docs/learn/packages): split a program into packages, add dependencies and publish your own.
+[Namespaces and packages](/docs/learn/packages): split a program into namespaces and packages, and add
+dependencies.

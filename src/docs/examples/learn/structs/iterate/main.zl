@@ -1,0 +1,33 @@
+namespace playlist
+
+import io
+
+struct Playlist {
+    songs []string
+
+    // Iter makes Playlist usable in `for`: it returns a fresh iterator.
+    func Iter() cursor {
+        return cursor{songs: this.songs}
+    }
+}
+
+// An iterator is any value with Next() (T, bool); false ends the loop.
+struct cursor {
+    songs []string
+    i     int
+
+    func Next() (string, bool) {
+        if this.i == len(this.songs) {
+            return ("", false)
+        }
+        this.i += 1
+        return (this.songs[this.i - 1], true)
+    }
+}
+
+func main() {
+    var p = Playlist{songs: ["Intro", "Theme", "Outro"]}
+    for i, song in p {                  // with two variables, i counts from 0
+        println(i, song)
+    }
+}

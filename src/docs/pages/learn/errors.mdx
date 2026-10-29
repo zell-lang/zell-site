@@ -65,9 +65,10 @@ Context added with `?("…")` wraps the original error rather than replacing it.
 
 ## Return traces
 
-Every error records where it was created and each `?` it passed through, at the cost of one pointer per
-step, with no stack unwinding. `println(err)` shows only the message; `errors.Frames(err)` returns the
-path as records and `errors.Trace(err)` as text with files and lines.
+Every error records where it was created and each `?` it passed through, at the cost of storing one
+small record per step, with no stack unwinding ([Error return traces](/docs/concepts/error-traces)
+explains how). `println(err)` shows only the message; `errors.Frames(err)` returns the path as records
+and `errors.Trace(err)` as text with files and lines.
 
 <Example id="errors/trace" />
 

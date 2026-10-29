@@ -32,7 +32,7 @@ The zero value of an interface is `nil`. Calling a method on a `nil` interface p
 
 <Callout type="go">
 In Go, `var m Meter = s` does not compile when `Inc` has a pointer receiver, because only `*Sum` has
-that method. In Zell all methods take a pointer, so both `Sum` and `*Sum` implement `Meter`. The
+that method. In Zell every struct method takes a pointer, so both `Sum` and `*Sum` implement `Meter`. The
 difference is only whether the interface holds a copy or a reference.
 </Callout>
 

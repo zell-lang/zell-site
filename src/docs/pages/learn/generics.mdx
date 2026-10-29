@@ -53,7 +53,7 @@ error: operator > is not defined on type parameter T: its constraint does not al
 | none | every type | assign, pass, return, `var z T` |
 | `Comparable` | numbers, `bool`, `char`, `string`, pointers, plain enums | `==`, `!=`, map keys |
 | `Equatable` | `Comparable` types and types with `Equals(other T) bool` | `==`, `!=` |
-| `Ordered` | numbers, `string`, `char`, types with `Compare(other T) int` | `<`, `<=`, `>`, `>=`, `==`, `!=`, `+` |
+| `Ordered` | numbers, `string`, `char`, types with `Compare(other T) int` | `<`, `<=`, `>`, `>=`; also `==`, `!=` and `+`, but a type with only `Compare` fails there at instantiation |
 | `Add`, `Sub`, `Mul`, `Div`, `Rem`, `Neg` | numbers with that operator (`Add` also `string`), types with the operator method | that operator and its `op=` |
 | an interface | types with its methods | calling those methods, converting to the interface |
 

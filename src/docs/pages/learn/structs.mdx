@@ -70,6 +70,17 @@ behaviour to the inner one, pass it in as an [interface](/docs/learn/interfaces)
 A promoted method counts as a method of the outer struct, so `Dog` satisfies every interface `Animal`
 does.
 
+## Iterating over your own types
+
+`for` works on your own types too. A type with an `Iter()` method can be looped over: `Iter` returns an
+*iterator*, any value with a `Next()` method that returns the next element and `true`, or `false` when
+the loop should end. `Iter` is called once, `Next` before every iteration.
+
+<Example id="learn/structs/iterate" />
+
+`Next` can also return `(K, V, bool)` for loops with a key and a value, or a pointer where `nil` ends
+the loop. A type that just has an `Items() []T` method is looped over through that slice.
+
 ## Printing and comparing
 
 `println` cannot print an arbitrary struct; the compiler says so and asks you to print the fields. Give

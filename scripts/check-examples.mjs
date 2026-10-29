@@ -82,6 +82,11 @@ for (const dir of examples()) {
   }
 }
 
+// Forget examples whose directory is gone.
+for (const id of Object.keys(manifest)) {
+  if (!existsSync(join(ROOT, id, "expected.out"))) delete manifest[id];
+}
+
 if (!dry) {
   const sorted = Object.fromEntries(Object.entries(manifest).sort(([a], [b]) => a.localeCompare(b)));
   writeFileSync(MANIFEST, JSON.stringify(sorted, null, 2) + "\n");

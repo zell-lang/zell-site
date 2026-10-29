@@ -13,11 +13,12 @@ needs your attention (see "Reference cycles" below).
 
 ## Values and references
 
-Structs, fixed-size arrays, numbers and tuples are values: they live in variables and are copied on
-assignment. `new T{}`, slices, maps, strings, closures, errors and values stored in interfaces live on
-the heap with a reference count. Copying a pointer or a slice adds a reference to the same object.
-
-<Example id="learn/memory/values" />
+You have already met the two kinds of data. Structs, arrays, numbers and tuples are values, copied on
+assignment ([Values and pointers](/docs/learn/structs#values-and-pointers)). Pointers from `new T{}`,
+slices, maps, strings, closures, errors and values stored in interfaces refer to heap objects, and
+copies share the object ([Slicing and sharing](/docs/learn/collections#slicing-and-sharing)). Every
+heap object carries a reference count: copying a reference adds one, dropping one subtracts one, and the
+object is freed when the count reaches zero.
 
 You never free anything by hand. The compiler inserts the count updates and removes most of them:
 parameters are borrowed, so a call does not touch the count, and objects that never leave a function
@@ -67,24 +68,18 @@ maps or tuples directly: store `*T` there.
 
 <Example id="learn/memory/ownership" />
 
-## `defer`
+## `defer` and `Drop` together
 
-`defer` schedules a call for the moment the function returns, as in Go. The arguments are evaluated
-when the `defer` statement runs, and deferred calls run last-in, first-out. On the way out, deferred
-calls run first, then the function's variables are dropped.
+[Control flow](/docs/learn/control-flow#defer) introduced `defer`: a call scheduled for the moment the
+function returns, with its arguments evaluated at once, run last-in, first-out. When a function both
+defers calls and owns values with destructors, the deferred calls run first, then the variables are
+dropped in reverse order of declaration, on every path out.
 
 <Example id="learn/memory/defer" />
 
 `defer` and `Drop` cover different needs. `Drop` belongs to a type and runs wherever a value of it ends.
 `defer` belongs to one function: use it for an action that is not tied to a value, like unlocking a
-mutex or logging the end of a job. A deferred call whose result is `T!` does not compile, because the
-error would be lost; handle it in a deferred closure:
-
-```zell
-defer func() {
-    try conn.Close() catch err { println("close:", err) }
-}()
-```
+mutex or logging the end of a job.
 
 ### `defer await`
 
@@ -101,7 +96,7 @@ deferred `await` still runs; when it panics, it is skipped.
 
 ### Panics
 
-A panic ends the task it happens in. Unwinding runs the task's pending `defer`s (except `defer await`)
+A panic ends the [task](/docs/learn/async#when-a-task-panics) it happens in. Unwinding runs the task's pending `defer`s (except `defer await`)
 and drops its live values, so a mutex released in a `defer` is released and no memory leaks. A panic
 in `main` outside any task ends the process with exit status 2.
 

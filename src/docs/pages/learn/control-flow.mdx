@@ -90,7 +90,8 @@ plain `break` does.
 The arguments of a deferred call are evaluated when the `defer` statement runs, so `attempts at defer`
 prints `1`. A deferred closure, `defer func() { … }()`, reads its variables when it runs, so it sees `2`.
 
-A deferred call cannot drop an error silently: deferring a function that returns `T!` is a compile error.
+A deferred call cannot drop an error silently: deferring a function that returns `T!` (a value or an
+error, see [Errors](/docs/learn/errors)) is a compile error.
 Handle the error inside a deferred closure instead:
 
 ```zell

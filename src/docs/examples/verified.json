@@ -519,10 +519,6 @@
     "zell": "0.1.5",
     "hash": "904b74d7"
   },
-  "learn/memory/values": {
-    "zell": "0.1.5",
-    "hash": "8aa4e9e5"
-  },
   "learn/memory/weak": {
     "zell": "0.1.5",
     "hash": "0eb814b2"
@@ -566,6 +562,10 @@
   "learn/structs/embedding": {
     "zell": "0.1.5",
     "hash": "4729259b"
+  },
+  "learn/structs/iterate": {
+    "zell": "0.1.5",
+    "hash": "a0de26df"
   },
   "learn/structs/methods": {
     "zell": "0.1.5",
