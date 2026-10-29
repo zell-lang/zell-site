@@ -16,7 +16,10 @@ import { sourceHash } from "../src/docs/hash.mjs";
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "src", "docs", "examples");
 const MANIFEST = join(ROOT, "verified.json");
 const ZELL = process.env.ZELL || "zell";
-const only = process.argv[2] ?? "";
+const args = process.argv.slice(2);
+// --dry: check only and leave verified.json alone (several authors checking at once)
+const dry = args.includes("--dry");
+const only = args.find(a => !a.startsWith("--")) ?? "";
 
 const norm = s => s.replace(/\r\n/g, "\n").replace(/\(\d+(\.\d+)?s\)/g, "(…s)").trimEnd();
 
@@ -79,7 +82,9 @@ for (const dir of examples()) {
   }
 }
 
-const sorted = Object.fromEntries(Object.entries(manifest).sort(([a], [b]) => a.localeCompare(b)));
-writeFileSync(MANIFEST, JSON.stringify(sorted, null, 2) + "\n");
+if (!dry) {
+  const sorted = Object.fromEntries(Object.entries(manifest).sort(([a], [b]) => a.localeCompare(b)));
+  writeFileSync(MANIFEST, JSON.stringify(sorted, null, 2) + "\n");
+}
 console.log(`${checked - failed}/${checked} examples match with zell ${version}`);
 process.exit(failed ? 1 : 0);
