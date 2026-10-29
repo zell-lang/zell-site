@@ -5,7 +5,7 @@
 //   3. scripts/deploy.mjs upload with DIST pointing at that build
 // The worktree is removed afterwards, whatever happens.
 import { execFileSync } from "node:child_process";
-import { existsSync, rmSync, symlinkSync } from "node:fs";
+import { existsSync, rmdirSync, symlinkSync, unlinkSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -27,6 +27,11 @@ try {
   run("node", [join(ROOT, "scripts", "deploy.mjs"), "upload"], ROOT, { DIST: join(TREE, "dist") });
   console.log(`publish: ${head} is live`);
 } finally {
-  rmSync(join(TREE, "node_modules"), { force: true, recursive: false });
-  run("git", ["worktree", "remove", "--force", TREE], ROOT);
+  // Remove the link itself, never what it points at: unlink works for symlinks and Windows
+  // junctions, rmdir is the fallback for a junction unlink refuses. If the link survives, keep
+  // the worktree: `git worktree remove` could otherwise follow it into the real node_modules.
+  const link = join(TREE, "node_modules");
+  try { unlinkSync(link); } catch { try { rmdirSync(link); } catch { /* checked below */ } }
+  if (existsSync(link)) console.error(`publish: could not remove the link ${link}; remove it by hand, then the worktree`);
+  else run("git", ["worktree", "remove", "--force", TREE], ROOT);
 }

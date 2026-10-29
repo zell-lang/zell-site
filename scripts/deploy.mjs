@@ -102,8 +102,12 @@ async function upload(env) {
     const base = env.FTP_DIR;
     if (!withApi && await removeDirIfAny(client, posix.join(base, "api"))) console.log("  removed api/ (DEPLOY_API=false)");
     for (const f of files) {
-      await client.ensureDir(posix.join(base, posix.dirname(f)));
-      await client.uploadFrom(join(DIST, f), posix.join(base, f));
+      try {
+        await client.ensureDir(posix.join(base, posix.dirname(f)));
+        await client.uploadFrom(join(DIST, f), posix.join(base, f));
+      } catch (err) {
+        throw new Error(`${f}: ${err.message}`);
+      }
       console.log(`  put ${f}`);
     }
 
