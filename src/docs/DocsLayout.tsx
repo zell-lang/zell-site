@@ -2,11 +2,29 @@ import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { SECTIONS, STATUS_LABEL } from "./nav";
 
+/** The section of a /docs/<section>/... path, if any. */
+const sectionOf = (pathname: string) => pathname.match(/^\/docs\/([^/]+)/)?.[1];
+
 /** The banner, the section tree on the left and the page; closes the mobile menu on navigation. */
 export default function DocsLayout() {
   const { pathname } = useLocation();
+  const current = sectionOf(pathname);
   const [open, setOpen] = useState(false);
-  useEffect(() => setOpen(false), [pathname]);
+  // Expanded sections: the current one always, plus whatever the reader opened.
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set(current ? [current] : []));
+
+  useEffect(() => {
+    setOpen(false);
+    if (current) setExpanded(e => (e.has(current) ? e : new Set(e).add(current)));
+  }, [pathname, current]);
+
+  const toggle = (id: string) =>
+    setExpanded(e => {
+      const n = new Set(e);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
 
   return (
     <>
@@ -16,22 +34,29 @@ export default function DocsLayout() {
           {open ? "Close" : "Documentation menu"}
         </button>
         <nav id="docs-nav" className={open ? "docs-nav open" : "docs-nav"} aria-label="Documentation">
-          <NavLink end to="/docs" className="docs-nav-home">Overview</NavLink>
-          {SECTIONS.map(s => (
-            <div key={s.id} className="docs-nav-section">
-              <NavLink end to={`/docs/${s.id}`} className="docs-nav-title">{s.title}</NavLink>
-              <ul>
-                {s.items.map(i => (
-                  <li key={i.slug}>
-                    <NavLink to={`/docs/${s.id}/${i.slug}`} className={i.status}>
-                      {i.title}
-                      {i.status !== "ready" && <span className="status-dot" title={STATUS_LABEL[i.status]} />}
-                    </NavLink>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+          <NavLink end to="/docs" className="docs-nav-home">Documentation home</NavLink>
+          {SECTIONS.map(s => {
+            const isOpen = expanded.has(s.id);
+            return (
+              <div key={s.id} className={s.id === current ? "docs-nav-section current" : "docs-nav-section"}>
+                <button className="docs-nav-title" aria-expanded={isOpen} aria-controls={`nav-${s.id}`} onClick={() => toggle(s.id)}>
+                  <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6 4l4 4-4 4" fill="none" stroke="currentColor" strokeWidth="1.6" /></svg>
+                  {s.title}
+                </button>
+                <ul id={`nav-${s.id}`} hidden={!isOpen}>
+                  <li><NavLink end to={`/docs/${s.id}`}>Overview</NavLink></li>
+                  {s.items.map(i => (
+                    <li key={i.slug}>
+                      <NavLink to={`/docs/${s.id}/${i.slug}`} className={i.status}>
+                        {i.title}
+                        {i.status !== "ready" && <span className="status-dot" title={STATUS_LABEL[i.status]} />}
+                      </NavLink>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })}
         </nav>
         <div className="docs-main">
           <Outlet />
