@@ -22,3 +22,10 @@ export const ToolIcons = {
   flask: <svg {...stroke}><path d="M9 3h6M10 3v5l-5 9a2 2 0 0 0 1.7 3h10.6a2 2 0 0 0 1.7-3l-5-9V3" /></svg>,
   bug: <svg {...stroke}><path d="M8 4h8l1 3h3v4H4V7h3l1-3zM6 11v6a3 3 0 0 0 3 3h6a3 3 0 0 0 3-3v-6M12 14v3" /></svg>,
 };
+
+/** Three bars that become a cross when `open`; for the mobile menu buttons. */
+export const MenuIcon = ({ open = false }: { open?: boolean }) => (
+  <svg viewBox="0 0 20 20" aria-hidden="true">
+    <path d={open ? "M5 5l10 10M15 5L5 15" : "M3 5.5h14M3 10h14M3 14.5h14"} fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+  </svg>
+);

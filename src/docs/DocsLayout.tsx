@@ -1,18 +1,37 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
-import { SECTIONS, STATUS_LABEL } from "./nav";
+import { findPage, findSection, SECTIONS, STATUS_LABEL } from "./nav";
+import { MenuIcon } from "../components/icons";
 import StdlibNav, { stdlibKeys } from "./stdlib/StdlibNav";
 
 /** The section of a /docs/<section>/... path, if any. */
 const sectionOf = (pathname: string) => pathname.match(/^\/docs\/([^/]+)/)?.[1];
 
+/** What the mobile menu bar shows for a path: the section and the page within it. */
+function whereAmI(pathname: string): [string, string?] {
+  const [, section, slug, ns] = pathname.split("/").slice(1);
+  const s = section ? findSection(section) : undefined;
+  if (!s) return ["Documentation"];
+  if (section === "reference" && slug === "stdlib") return [s.title, ns ? `std::${ns}` : "Standard library"];
+  return [s.title, slug ? findPage(section, slug)?.title : "Overview"];
+}
+
 /** The banner, the section tree on the left and the page; closes the mobile menu on navigation. */
 export default function DocsLayout() {
   const { pathname } = useLocation();
   const current = sectionOf(pathname);
+  const where = whereAmI(pathname);
   const [open, setOpen] = useState(false);
   // Expanded sections: the current one always, plus whatever the reader opened.
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set([...(current ? [current] : []), ...stdlibKeys(pathname)]));
+
+  // The mobile menu closes on Escape.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    addEventListener("keydown", onKey);
+    return () => removeEventListener("keydown", onKey);
+  }, [open]);
 
   useEffect(() => {
     setOpen(false);
@@ -31,10 +50,24 @@ export default function DocsLayout() {
   return (
     <>
       <DocsBanner />
+      <div className="docs-bar">
+        <div className="wrap wide">
+          <button
+            className="docs-menu"
+            aria-expanded={open}
+            aria-controls="docs-nav"
+            aria-label={open ? "Close documentation menu" : "Documentation menu"}
+            onClick={() => setOpen(o => !o)}
+          >
+            <MenuIcon open={open} />
+            <span className="where">
+              {where[0]}
+              {where[1] && <> <span className="sep">›</span> <b>{where[1]}</b></>}
+            </span>
+          </button>
+        </div>
+      </div>
       <div className="wrap wide docs">
-        <button className="docs-menu" aria-expanded={open} aria-controls="docs-nav" onClick={() => setOpen(o => !o)}>
-          {open ? "Close" : "Documentation menu"}
-        </button>
         <nav id="docs-nav" className={open ? "docs-nav open" : "docs-nav"} aria-label="Documentation">
           <NavLink end to="/docs" className="docs-nav-home">Documentation home</NavLink>
           {SECTIONS.map(s => {
